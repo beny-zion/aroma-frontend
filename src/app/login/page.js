@@ -1,17 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+
+  // Wake up the server on page load (Render free tier sleeps after inactivity)
+  useEffect(() => {
+    fetch(`${API_BASE}/health`)
+      .then(() => setServerReady(true))
+      .catch(() => setServerReady(true));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -172,6 +182,13 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {!serverReady && (
+              <div className="flex items-center justify-center gap-2 text-sm text-[var(--color-text-muted)]">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>מתחבר לשרת...</span>
+              </div>
+            )}
 
             <button
               type="submit"
