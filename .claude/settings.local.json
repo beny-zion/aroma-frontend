@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -D - -o /dev/null -X OPTIONS http://localhost:5000/api/auth/login -H \"Origin: http://localhost:3000\" -H \"Access-Control-Request-Method: POST\" -H \"Access-Control-Request-Headers: Content-Type\")",
+      "Bash(curl -s http://localhost:3000/login -o /dev/null -w \"%{http_code}\")",
+      "Bash(taskkill /PID 30804 /F)",
+      "Bash(taskkill /PID 39320 /F)",
+      "Bash(cmd.exe /c \"taskkill /PID 30804 /F & taskkill /PID 39320 /F\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \":3000 :3001\")"
+    ]
+  }
+}
