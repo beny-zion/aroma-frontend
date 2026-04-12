@@ -50,8 +50,8 @@ export default function LayoutShell({ children }) {
     await logout();
   };
 
-  // Full-screen loading spinner during initial auth check
-  if (loading || shouldRedirectToHome || shouldRedirectToLogin) {
+  // Full-screen loading spinner during initial auth check (skip for login page)
+  if ((!isLoginPage && loading) || shouldRedirectToHome || shouldRedirectToLogin) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
