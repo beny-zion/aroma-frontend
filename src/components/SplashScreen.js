@@ -58,26 +58,16 @@ export default function SplashScreen({ onComplete }) {
           transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Logo icon */}
+        {/* Logo */}
         <div
-          className="w-24 h-24 mx-auto rounded-3xl flex items-center justify-center shadow-xl mb-6"
+          className="w-64 mx-auto rounded-2xl px-6 py-5 shadow-xl mb-6"
           style={{
-            background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+            backgroundColor: 'var(--color-primary-50)',
             boxShadow: '0 20px 40px rgba(74, 107, 89, 0.3)',
           }}
         >
-          <svg className="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-          </svg>
+          <img src="/AromaPlus.svg" alt="ארומה פלוס" className="w-full h-auto object-contain" />
         </div>
-
-        {/* Brand name */}
-        <h1
-          className="text-4xl font-bold mb-2"
-          style={{ color: 'var(--color-primary-dark)' }}
-        >
-          ארומה פלוס
-        </h1>
         <p className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
           מערכת ניהול מכשירי ריח
         </p>

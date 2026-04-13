@@ -14,8 +14,25 @@ export const metadata = {
     title: 'ארומה פלוס',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple: '/apple-touch-icon.png',
+  },
+  openGraph: {
+    title: 'ארומה פלוס - מערכת ניהול',
+    description: 'מערכת ניהול מכשירי ריח ומילויים',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+    locale: 'he_IL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ארומה פלוס - מערכת ניהול',
+    description: 'מערכת ניהול מכשירי ריח ומילויים',
+    images: ['/og-image.png'],
   },
   viewport: {
     width: 'device-width',
