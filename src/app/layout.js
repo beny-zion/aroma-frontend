@@ -24,7 +24,6 @@ export const metadata = {
   openGraph: {
     title: 'ארומה פלוס - מערכת ניהול',
     description: 'מערכת ניהול מכשירי ריח ומילויים',
-    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     locale: 'he_IL',
     type: 'website',
   },
@@ -32,7 +31,6 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'ארומה פלוס - מערכת ניהול',
     description: 'מערכת ניהול מכשירי ריח ומילויים',
-    images: ['/og-image.png'],
   },
   viewport: {
     width: 'device-width',

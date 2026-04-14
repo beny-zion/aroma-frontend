@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import SplashScreen from './SplashScreen';
+import ServerLoadingScreen from './ServerLoadingScreen';
 import { LogOut } from 'lucide-react';
 
 const roleLabels = {
@@ -50,25 +51,9 @@ export default function LayoutShell({ children }) {
     await logout();
   };
 
-  // Full-screen loading spinner during initial auth check (skip for login page)
+  // Full-screen loading during initial auth check (skip for login page)
   if ((!isLoginPage && loading) || shouldRedirectToHome || shouldRedirectToLogin) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="relative w-20 h-20 mx-auto">
-            <div
-              className="absolute inset-0 rounded-full border-4"
-              style={{ borderColor: 'var(--color-primary-100)' }}
-            />
-            <div
-              className="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
-              style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }}
-            />
-          </div>
-          <p className="mt-6 text-gray-500 font-medium">טוען...</p>
-        </div>
-      </div>
-    );
+    return <ServerLoadingScreen />;
   }
 
   // Login page - no sidebar, full screen
