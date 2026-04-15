@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { branchesAPI, devicesAPI } from '@/lib/api';
 import { useAllCustomers, useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
@@ -10,6 +10,7 @@ import Pagination from '@/components/Pagination';
 import { Building2, MapPin, Plus, Search, Eye, Edit3, Pause, Play, Trash2, Droplets, X } from 'lucide-react';
 
 export default function BranchesPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedBranchId = searchParams.get('id');
 
@@ -378,7 +379,7 @@ export default function BranchesPage() {
                   <div
                     key={branch._id}
                     className="card hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden"
-                    onClick={() => viewBranchDetails(branch._id)}
+                    onClick={() => router.push(`/branches/${branch._id}`)}
                   >
                     {/* Subtle icon decoration */}
                     <div className="absolute -left-3 -bottom-3 opacity-[0.04]">
@@ -428,7 +429,7 @@ export default function BranchesPage() {
             <div
               key={branch._id}
               className="card hover:shadow-lg transition-shadow cursor-pointer relative overflow-hidden"
-              onClick={() => viewBranchDetails(branch._id)}
+              onClick={() => router.push(`/branches/${branch._id}`)}
             >
               {/* Subtle icon decoration */}
               <div className="absolute -left-3 -bottom-3 opacity-[0.04]">

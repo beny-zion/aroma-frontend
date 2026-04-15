@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { customersAPI, branchesAPI, devicesAPI } from '@/lib/api';
 import { useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
@@ -8,6 +9,7 @@ import Pagination from '@/components/Pagination';
 import { Users, Plus, Search, Phone, Mail, Building2, Edit3, MapPin, CreditCard, X } from 'lucide-react';
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { scents } = useScents();
   const { deviceTypes } = useActiveDeviceTypes();
   const { invalidateCustomers, invalidateBranches, invalidateDevices } = useInvalidate();
@@ -345,7 +347,7 @@ export default function CustomersPage() {
           <div
             key={customer._id}
             className="card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => viewCustomerDetails(customer._id)}
+            onClick={() => router.push(`/customers/${customer._id}`)}
           >
             <div className="flex justify-between items-start mb-3">
               <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{customer.name}</h3>
