@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { devicesAPI, scentsAPI, serviceLogsAPI } from '@/lib/api';
+import { serviceLogsAPI } from '@/lib/api';
+import { useAllDevices, useScents, useInvalidate } from '@/hooks/useData';
 import StatusBadge from '@/components/StatusBadge';
 import { Droplets, Search, CheckCircle, ArrowRight } from 'lucide-react';
 
@@ -11,9 +12,11 @@ export default function RefillPage() {
   const preselectedDeviceId = searchParams.get('device');
   const preselectedBranchId = searchParams.get('branch');
 
-  const [devices, setDevices] = useState([]);
-  const [scents, setScents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { devices, isLoading: devicesLoading } = useAllDevices();
+  const { scents, isLoading: scentsLoading } = useScents();
+  const { invalidateDevices, invalidateScents, invalidateServiceLogs } = useInvalidate();
+  const loading = devicesLoading || scentsLoading;
+
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -26,10 +29,6 @@ export default function RefillPage() {
 
   // חיפוש מכשיר
   const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   useEffect(() => {
     // אם יש מכשיר מראש ב-URL
@@ -51,22 +50,6 @@ export default function RefillPage() {
       }
     }
   }, [preselectedBranchId, devices]);
-
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [devicesData, scentsData] = await Promise.all([
-        devicesAPI.getAll(),
-        scentsAPI.getAll()
-      ]);
-      setDevices(devicesData);
-      setScents(scentsData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function selectDevice(device) {
     setSelectedDevice(device);
@@ -103,7 +86,9 @@ export default function RefillPage() {
         setMlFilled('');
         setNotes('');
         setSuccess(false);
-        loadData(); // רענון הנתונים
+        invalidateDevices();
+        invalidateScents();
+        invalidateServiceLogs();
       }, 2000);
 
     } catch (err) {

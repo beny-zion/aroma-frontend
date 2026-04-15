@@ -2,19 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { branchesAPI, customersAPI, scentsAPI, devicesAPI, deviceTypesAPI } from '@/lib/api';
+import useSWR from 'swr';
+import { branchesAPI, devicesAPI } from '@/lib/api';
+import { useAllCustomers, useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
 import StatusBadge from '@/components/StatusBadge';
+import Pagination from '@/components/Pagination';
 import { Building2, MapPin, Plus, Search, Eye, Edit3, Pause, Play, Trash2, Droplets, X } from 'lucide-react';
 
 export default function BranchesPage() {
   const searchParams = useSearchParams();
   const preselectedBranchId = searchParams.get('id');
 
-  const [branches, setBranches] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Shared dropdown data (cached via SWR)
+  const { customers } = useAllCustomers();
+  const { scents } = useScents();
+  const { deviceTypes } = useActiveDeviceTypes();
+  const { invalidateBranches, invalidateDevices } = useInvalidate();
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -34,8 +42,7 @@ export default function BranchesPage() {
   // כתובת הלקוח הנבחר
   const [selectedCustomerAddress, setSelectedCustomerAddress] = useState('');
 
-  // ריחות ושינוי ריח במכשיר
-  const [scents, setScents] = useState([]);
+  // שינוי ריח במכשיר
   const [editingScentDevice, setEditingScentDevice] = useState(null);
   const [newScentId, setNewScentId] = useState('');
 
@@ -51,24 +58,24 @@ export default function BranchesPage() {
     locationInBranch: ''
   });
 
-  // סוגי מכשירים
-  const [deviceTypes, setDeviceTypes] = useState([]);
-
+  // Debounce search
   useEffect(() => {
-    loadBranches();
-    loadCustomers();
-    loadScents();
-    loadDeviceTypes();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  async function loadDeviceTypes() {
-    try {
-      const data = await deviceTypesAPI.getAll({ isActive: true });
-      setDeviceTypes(data);
-    } catch (err) {
-      console.error('Error loading device types:', err);
-    }
-  }
+  // SWR for paginated branches
+  const branchParams = new URLSearchParams({ page: currentPage, limit: 20 });
+  if (debouncedSearch) branchParams.set('search', debouncedSearch);
+  if (cityFilter !== 'all') branchParams.set('city', cityFilter);
+
+  const { data: branchData, isLoading: branchesLoading } = useSWR(`/branches?${branchParams.toString()}`);
+  const branches = branchData?.data || [];
+  const pagination = branchData?.pagination || null;
+  const loading = branchesLoading && !branchData;
 
   // פתיחת מודל סניף אם יש id ב-URL
   useEffect(() => {
@@ -76,36 +83,6 @@ export default function BranchesPage() {
       viewBranchDetails(preselectedBranchId);
     }
   }, [preselectedBranchId, branches]);
-
-  async function loadBranches() {
-    try {
-      setLoading(true);
-      const data = await branchesAPI.getAll();
-      setBranches(data);
-    } catch (err) {
-      console.error('Error loading branches:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadCustomers() {
-    try {
-      const data = await customersAPI.getAll();
-      setCustomers(data);
-    } catch (err) {
-      console.error('Error loading customers:', err);
-    }
-  }
-
-  async function loadScents() {
-    try {
-      const data = await scentsAPI.getAll();
-      setScents(data);
-    } catch (err) {
-      console.error('Error loading scents:', err);
-    }
-  }
 
   async function handleChangeDeviceScent(deviceId) {
     if (!newScentId) return;
@@ -143,7 +120,8 @@ export default function BranchesPage() {
       };
 
       await branchesAPI.create(branchData);
-      await loadBranches();
+      invalidateBranches();
+      invalidateDevices();
       setShowCreateModal(false);
       setNewBranch({
         customerId: '',
@@ -209,7 +187,8 @@ export default function BranchesPage() {
         visitIntervalDays: parseInt(editBranch.visitIntervalDays) || 45,
         isActive: editBranch.isActive
       });
-      await loadBranches();
+      invalidateBranches();
+      invalidateDevices();
       setShowEditBranchModal(false);
       setEditBranch(null);
     } catch (err) {
@@ -227,7 +206,8 @@ export default function BranchesPage() {
     try {
       setSaving(true);
       await branchesAPI.update(selectedBranch._id, { isActive: newStatus });
-      await loadBranches();
+      invalidateBranches();
+      invalidateDevices();
       const updated = await branchesAPI.getById(selectedBranch._id);
       setSelectedBranch(updated);
     } catch (err) {
@@ -296,21 +276,11 @@ export default function BranchesPage() {
     }
   }
 
-  // רשימת ערים ייחודיות
+  // רשימת ערים ייחודיות from current page data
   const cities = [...new Set(branches.map(b => b.city).filter(Boolean))].sort();
 
-  const filteredBranches = branches.filter(branch => {
-    if (cityFilter !== 'all' && branch.city !== cityFilter) return false;
-
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      return branch.branchName?.toLowerCase().includes(search) ||
-             branch.customerId?.name?.toLowerCase().includes(search) ||
-             branch.address?.toLowerCase().includes(search);
-    }
-
-    return true;
-  });
+  // Filtering is now server-side
+  const filteredBranches = branches;
 
   const formatDate = (date) => {
     if (!date) return '-';
@@ -507,6 +477,9 @@ export default function BranchesPage() {
           <p>לא נמצאו סניפים התואמים לחיפוש</p>
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setCurrentPage} />
 
       {/* מודל פרטי סניף */}
       {showModal && selectedBranch && (

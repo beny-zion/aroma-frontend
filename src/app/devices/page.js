@@ -1,26 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { devicesAPI, branchesAPI, scentsAPI, deviceTypesAPI } from '@/lib/api';
+import useSWR from 'swr';
+import { devicesAPI } from '@/lib/api';
+import { useScents, useActiveDeviceTypes, useBranches, useInvalidate } from '@/hooks/useData';
 import StatusBadge from '@/components/StatusBadge';
+import Pagination from '@/components/Pagination';
 import { Cpu, Search, Plus, Edit3, Pause, Play, Trash2, Droplets } from 'lucide-react';
 
 export default function DevicesPage() {
-  const [devices, setDevices] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [scents, setScents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Shared dropdown data (cached globally via SWR)
+  const { scents } = useScents();
+  const { deviceTypes } = useActiveDeviceTypes();
+  const { branches } = useBranches();
+  const { invalidateDevices } = useInvalidate();
+
   const [saving, setSaving] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, green, yellow, red
+  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // מודלים
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
-  // סוגי מכשירים
-  const [deviceTypes, setDeviceTypes] = useState([]);
 
   // טופס יצירת/עריכת מכשיר
   const [deviceForm, setDeviceForm] = useState({
@@ -31,38 +35,24 @@ export default function DevicesPage() {
     isActive: true
   });
 
+  // Debounce search
   useEffect(() => {
-    loadData();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [devicesData, branchesData, scentsData, deviceTypesData] = await Promise.all([
-        devicesAPI.getAll(),
-        branchesAPI.getAll(),
-        scentsAPI.getAll(),
-        deviceTypesAPI.getAll({ isActive: true })
-      ]);
-      setDevices(devicesData);
-      setBranches(branchesData);
-      setScents(scentsData);
-      setDeviceTypes(deviceTypesData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // SWR for paginated devices
+  const deviceParams = new URLSearchParams({ page: currentPage, limit: 20 });
+  if (filter !== 'all') deviceParams.set('status', filter);
+  if (debouncedSearch) deviceParams.set('search', debouncedSearch);
 
-  async function loadDevices() {
-    try {
-      const data = await devicesAPI.getAll();
-      setDevices(data);
-    } catch (err) {
-      console.error('Error loading devices:', err);
-    }
-  }
+  const { data: deviceData, isLoading: devicesLoading } = useSWR(`/devices?${deviceParams.toString()}`);
+  const devices = deviceData?.data || [];
+  const pagination = deviceData?.pagination || null;
+  const loading = devicesLoading && !deviceData;
 
   // יצירת מכשיר
   async function handleCreateDevice(e) {
@@ -78,7 +68,7 @@ export default function DevicesPage() {
         locationInBranch: deviceForm.locationInBranch || '',
         isActive: true
       });
-      await loadDevices();
+      invalidateDevices();
       setShowCreateModal(false);
       setDeviceForm({
         branchId: '',
@@ -108,7 +98,7 @@ export default function DevicesPage() {
         locationInBranch: deviceForm.locationInBranch || '',
         isActive: deviceForm.isActive
       });
-      await loadDevices();
+      invalidateDevices();
       setShowEditModal(false);
       setSelectedDevice(null);
     } catch (err) {
@@ -137,7 +127,7 @@ export default function DevicesPage() {
     try {
       setSaving(true);
       await devicesAPI.update(device._id, { isActive: device.isActive === false });
-      await loadDevices();
+      invalidateDevices();
     } catch (err) {
       console.error('Error updating device status:', err);
       alert('שגיאה בעדכון סטטוס');
@@ -153,7 +143,7 @@ export default function DevicesPage() {
     try {
       setSaving(true);
       await devicesAPI.delete(device._id);
-      await loadDevices();
+      invalidateDevices();
     } catch (err) {
       console.error('Error deleting device:', err);
       alert('שגיאה במחיקת מכשיר');
@@ -172,26 +162,8 @@ export default function DevicesPage() {
     return Math.floor((new Date() - new Date(date)) / (1000 * 60 * 60 * 24));
   };
 
-  const filteredDevices = devices.filter(device => {
-    // סינון לפי סטטוס
-    if (filter !== 'all' && device.refillStatus !== filter) return false;
-
-    // סינון לפי חיפוש
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      const branchName = device.branchId?.branchName?.toLowerCase() || '';
-      const customerName = device.branchId?.customerId?.name?.toLowerCase() || '';
-      const deviceType = device.deviceType?.toLowerCase() || '';
-      const location = device.locationInBranch?.toLowerCase() || '';
-
-      return branchName.includes(search) ||
-             customerName.includes(search) ||
-             deviceType.includes(search) ||
-             location.includes(search);
-    }
-
-    return true;
-  });
+  // Devices are now filtered server-side via API params
+  const filteredDevices = devices;
 
   if (loading) {
     return (
@@ -217,7 +189,7 @@ export default function DevicesPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
-            {devices.length} מכשירים
+            {pagination?.total || devices.length} מכשירים
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -247,28 +219,28 @@ export default function DevicesPage() {
           {/* כפתורי פילטר */}
           <div className="filter-chips">
             <button
-              onClick={() => setFilter('all')}
+              onClick={() => { setFilter('all'); setCurrentPage(1); }}
               className={`filter-chip ${filter === 'all' ? 'active' : ''}`}
             >
-              הכל ({devices.length})
+              הכל
             </button>
             <button
-              onClick={() => setFilter('green')}
+              onClick={() => { setFilter('green'); setCurrentPage(1); }}
               className={`filter-chip ${filter === 'green' ? 'active' : ''}`}
             >
-              תקין ({devices.filter(d => d.refillStatus === 'green').length})
+              תקין
             </button>
             <button
-              onClick={() => setFilter('yellow')}
+              onClick={() => { setFilter('yellow'); setCurrentPage(1); }}
               className={`filter-chip ${filter === 'yellow' ? 'active' : ''}`}
             >
-              תשומת לב ({devices.filter(d => d.refillStatus === 'yellow').length})
+              תשומת לב
             </button>
             <button
-              onClick={() => setFilter('red')}
+              onClick={() => { setFilter('red'); setCurrentPage(1); }}
               className={`filter-chip ${filter === 'red' ? 'active' : ''}`}
             >
-              דחוף ({devices.filter(d => d.refillStatus === 'red').length})
+              דחוף
             </button>
           </div>
         </div>
@@ -471,6 +443,9 @@ export default function DevicesPage() {
           })
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setCurrentPage} />
 
       {/* מודל יצירת מכשיר */}
       {showCreateModal && (

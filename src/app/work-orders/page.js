@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { workOrdersAPI, branchesAPI, usersAPI } from '@/lib/api';
+import useSWR from 'swr';
+import { workOrdersAPI } from '@/lib/api';
+import { useBranches, useTechnicians, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ClipboardList, Plus, Filter, Calendar, User, MapPin,
@@ -58,10 +60,10 @@ export default function WorkOrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [workOrders, setWorkOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [branches, setBranches] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
+  // Shared dropdown data (cached via SWR)
+  const { branches } = useBranches();
+  const { technicians } = useTechnicians();
+  const { invalidateWorkOrders } = useInvalidate();
 
   // Filters
   const [filters, setFilters] = useState({
@@ -73,7 +75,7 @@ export default function WorkOrdersPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Pagination
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Create modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -99,52 +101,20 @@ export default function WorkOrdersPage() {
     }
   }, [user, router]);
 
-  useEffect(() => {
-    loadWorkOrders();
-    loadBranches();
-    loadTechnicians();
-  }, []);
+  // SWR for paginated work orders
+  const orderParams = useMemo(() => {
+    const params = new URLSearchParams({ page: currentPage, limit: 20 });
+    if (filters.status) params.set('status', filters.status);
+    if (filters.priority) params.set('priority', filters.priority);
+    if (filters.assignedTo) params.set('assignedTo', filters.assignedTo);
+    if (filters.branchId) params.set('branchId', filters.branchId);
+    return params.toString();
+  }, [currentPage, filters]);
 
-  useEffect(() => {
-    loadWorkOrders();
-  }, [filters, pagination.page]);
-
-  async function loadWorkOrders() {
-    try {
-      setLoading(true);
-      const params = { page: pagination.page, limit: pagination.limit };
-      if (filters.status) params.status = filters.status;
-      if (filters.priority) params.priority = filters.priority;
-      if (filters.assignedTo) params.assignedTo = filters.assignedTo;
-      if (filters.branchId) params.branchId = filters.branchId;
-
-      const result = await workOrdersAPI.getAll(params);
-      setWorkOrders(result.data);
-      setPagination(prev => ({ ...prev, total: result.pagination.total }));
-    } catch (err) {
-      console.error('Error loading work orders:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadBranches() {
-    try {
-      const data = await branchesAPI.getAll();
-      setBranches(Array.isArray(data) ? data : data.data || []);
-    } catch (err) {
-      console.error('Error loading branches:', err);
-    }
-  }
-
-  async function loadTechnicians() {
-    try {
-      const result = await usersAPI.getAll({ role: 'technician', isActive: true, limit: 100 });
-      setTechnicians(result.data || []);
-    } catch (err) {
-      console.error('Error loading technicians:', err);
-    }
-  }
+  const { data: orderData, isLoading: ordersLoading } = useSWR(`/work-orders?${orderParams}`);
+  const workOrders = orderData?.data || [];
+  const pagination = { page: currentPage, limit: 20, total: orderData?.pagination?.total || 0 };
+  const loading = ordersLoading && !orderData;
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -162,7 +132,7 @@ export default function WorkOrdersPage() {
         branchId: '', assignedTo: '', scheduledDate: '', priority: 'medium',
         type: 'routine_refill', notes: '', estimatedDuration: ''
       });
-      loadWorkOrders();
+      invalidateWorkOrders();
     } catch (err) {
       alert(err.message || 'שגיאה ביצירת הזמנת עבודה');
     } finally {
@@ -175,7 +145,7 @@ export default function WorkOrdersPage() {
     try {
       const result = await workOrdersAPI.autoGenerate({});
       alert(result.message);
-      loadWorkOrders();
+      invalidateWorkOrders();
     } catch (err) {
       alert(err.message || 'שגיאה ביצירה אוטומטית');
     }
@@ -194,7 +164,7 @@ export default function WorkOrdersPage() {
   async function handleStatusChange(id, newStatus) {
     try {
       await workOrdersAPI.updateStatus(id, newStatus);
-      loadWorkOrders();
+      invalidateWorkOrders();
       if (selectedOrder?._id === id) {
         const updated = await workOrdersAPI.getById(id);
         setSelectedOrder(updated);
@@ -275,7 +245,7 @@ export default function WorkOrdersPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <select
               value={filters.status}
-              onChange={(e) => { setFilters({ ...filters, status: e.target.value }); setPagination(p => ({ ...p, page: 1 })); }}
+              onChange={(e) => { setFilters({ ...filters, status: e.target.value }); setCurrentPage(1); }}
               className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-(--color-primary)"
             >
               <option value="">כל הסטטוסים</option>
@@ -283,7 +253,7 @@ export default function WorkOrdersPage() {
             </select>
             <select
               value={filters.priority}
-              onChange={(e) => { setFilters({ ...filters, priority: e.target.value }); setPagination(p => ({ ...p, page: 1 })); }}
+              onChange={(e) => { setFilters({ ...filters, priority: e.target.value }); setCurrentPage(1); }}
               className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-(--color-primary)"
             >
               <option value="">כל העדיפויות</option>
@@ -291,14 +261,14 @@ export default function WorkOrdersPage() {
             </select>
             <select
               value={filters.assignedTo}
-              onChange={(e) => { setFilters({ ...filters, assignedTo: e.target.value }); setPagination(p => ({ ...p, page: 1 })); }}
+              onChange={(e) => { setFilters({ ...filters, assignedTo: e.target.value }); setCurrentPage(1); }}
               className="px-3 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-(--color-primary)"
             >
               <option value="">כל הטכנאים</option>
               {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
             </select>
             <button
-              onClick={() => { setFilters({ status: '', priority: '', assignedTo: '', branchId: '' }); setPagination(p => ({ ...p, page: 1 })); }}
+              onClick={() => { setFilters({ status: '', priority: '', assignedTo: '', branchId: '' }); setCurrentPage(1); }}
               className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-xl"
             >
               נקה סינון
@@ -423,7 +393,7 @@ export default function WorkOrdersPage() {
         <div className="card">
           <div className="flex justify-center items-center gap-4 py-2">
             <button
-              onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={pagination.page <= 1}
               className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
             >
@@ -433,7 +403,7 @@ export default function WorkOrdersPage() {
               עמוד {pagination.page} מתוך {totalPages}
             </span>
             <button
-              onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+              onClick={() => setCurrentPage(p => p + 1)}
               disabled={pagination.page >= totalPages}
               className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
             >

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { RefreshCw, Wifi, Calendar } from 'lucide-react';
-import { adminAPI } from '@/lib/api';
+import { useDashboardStats } from '@/hooks/useData';
 
 // Dashboard Components
 import KPICard from '@/components/dashboard/KPICard';
@@ -12,35 +11,8 @@ import InventoryIntelligence from '@/components/dashboard/InventoryIntelligence'
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 
 export default function Dashboard() {
-  const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await adminAPI.getDashboardStats();
-
-      if (response.success) {
-        setDashboardData(response.data);
-        setLastUpdated(new Date());
-      } else {
-        throw new Error(response.message || 'שגיאה בטעינת הנתונים');
-      }
-    } catch (err) {
-      setError(err.message);
-      console.error('Dashboard load error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const { data: dashboardData, isLoading: loading, error: swrError, refresh } = useDashboardStats();
+  const error = swrError?.message || null;
 
   if (loading) {
     return (
@@ -76,7 +48,7 @@ export default function Dashboard() {
               <h3 className="font-bold text-red-800 text-lg">שגיאה בטעינת הנתונים</h3>
               <p className="text-red-600 mt-1 text-sm">{error}</p>
               <button
-                onClick={loadDashboardData}
+                onClick={() => refresh()}
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -100,14 +72,12 @@ export default function Dashboard() {
           <p className="text-gray-500 mt-1">סקירה כללית של ארומה פלוס</p>
         </div>
         <div className="flex items-center gap-4">
-          {lastUpdated && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Wifi className="w-4 h-4 text-green-500" />
-              <span>עודכן {lastUpdated.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Wifi className="w-4 h-4 text-green-500" />
+            <span>נתונים מעודכנים</span>
+          </div>
           <button
-            onClick={loadDashboardData}
+            onClick={() => refresh()}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
           >
             <RefreshCw className="w-4 h-4" />

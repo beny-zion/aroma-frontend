@@ -1,21 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { serviceLogsAPI, devicesAPI, branchesAPI, scentsAPI } from '@/lib/api';
+import { useState, useMemo } from 'react';
+import useSWR from 'swr';
+import { serviceLogsAPI } from '@/lib/api';
+import { useAllDevices, useBranches, useScents, useInvalidate } from '@/hooks/useData';
+import Pagination from '@/components/Pagination';
 import { FileText, Plus, Search, Calendar, Droplets, User, Eye, Edit3, Trash2, Filter, X, ClipboardList, Beaker } from 'lucide-react';
 
 export default function ServiceLogsPage() {
-  const [serviceLogs, setServiceLogs] = useState([]);
-  const [devices, setDevices] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [scents, setScents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Shared dropdown data (cached via SWR)
+  const { devices } = useAllDevices();
+  const { branches } = useBranches();
+  const { scents } = useScents();
+  const { invalidateServiceLogs, invalidateDevices, invalidateScents } = useInvalidate();
+
   const [saving, setSaving] = useState(false);
 
   // פילטרים
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all'); // all, today, week, month
+  const [dateFilter, setDateFilter] = useState('all');
   const [branchFilter, setBranchFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // מודלים
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -33,38 +38,31 @@ export default function ServiceLogsPage() {
     date: new Date().toISOString().split('T')[0]
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
-    try {
-      setLoading(true);
-      const [logsData, devicesData, branchesData, scentsData] = await Promise.all([
-        serviceLogsAPI.getAll(),
-        devicesAPI.getAll(),
-        branchesAPI.getAll(),
-        scentsAPI.getAll()
-      ]);
-      setServiceLogs(logsData);
-      setDevices(devicesData);
-      setBranches(branchesData);
-      setScents(scentsData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setLoading(false);
+  // Build SWR key for paginated service logs with date filter
+  const logParams = useMemo(() => {
+    const params = new URLSearchParams({ page: currentPage, limit: 20 });
+    if (dateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (dateFilter === 'today') {
+        params.set('startDate', today.toISOString());
+      } else if (dateFilter === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        params.set('startDate', weekAgo.toISOString());
+      } else if (dateFilter === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        params.set('startDate', monthAgo.toISOString());
+      }
     }
-  }
+    return params.toString();
+  }, [currentPage, dateFilter]);
 
-  async function loadServiceLogs() {
-    try {
-      const data = await serviceLogsAPI.getAll();
-      setServiceLogs(data);
-    } catch (err) {
-      console.error('Error loading service logs:', err);
-    }
-  }
+  const { data: logData, isLoading: logsLoading } = useSWR(`/service-logs?${logParams}`);
+  const serviceLogs = logData?.data || [];
+  const pagination = logData?.pagination || null;
+  const loading = logsLoading && !logData;
 
   function resetForm() {
     setFormData({
@@ -91,7 +89,9 @@ export default function ServiceLogsPage() {
         technicianNotes: formData.technicianNotes || undefined,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString()
       });
-      await loadServiceLogs();
+      invalidateServiceLogs();
+      invalidateDevices();
+      invalidateScents();
       setShowCreateModal(false);
       resetForm();
     } catch (err) {
@@ -114,7 +114,9 @@ export default function ServiceLogsPage() {
         technicianName: formData.technicianName || undefined,
         technicianNotes: formData.technicianNotes || undefined
       });
-      await loadServiceLogs();
+      invalidateServiceLogs();
+      invalidateDevices();
+      invalidateScents();
       setShowEditModal(false);
       setSelectedLog(null);
       resetForm();
@@ -150,7 +152,9 @@ export default function ServiceLogsPage() {
     try {
       setSaving(true);
       await serviceLogsAPI.delete(log._id);
-      await loadServiceLogs();
+      invalidateServiceLogs();
+      invalidateDevices();
+      invalidateScents();
     } catch (err) {
       console.error('Error deleting service log:', err);
       alert(err.message || 'שגיאה במחיקת רישום');
@@ -175,55 +179,25 @@ export default function ServiceLogsPage() {
     return new Date(date).toLocaleDateString('he-IL');
   }
 
-  // פילטור לוגים
+  // Date filtering is now server-side; branch & search filter on current page
   const filteredLogs = serviceLogs.filter(log => {
-    // פילטר תאריך
-    if (dateFilter !== 'all') {
-      const logDate = new Date(log.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (dateFilter === 'today') {
-        const logDay = new Date(logDate);
-        logDay.setHours(0, 0, 0, 0);
-        if (logDay.getTime() !== today.getTime()) return false;
-      } else if (dateFilter === 'week') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        if (logDate < weekAgo) return false;
-      } else if (dateFilter === 'month') {
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        if (logDate < monthAgo) return false;
-      }
-    }
-
-    // פילטר סניף
     if (branchFilter !== 'all') {
       if (log.deviceId?.branchId?._id !== branchFilter) return false;
     }
-
-    // חיפוש
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      const customerName = log.deviceId?.branchId?.customerId?.name?.toLowerCase() || '';
       const branchName = log.deviceId?.branchId?.branchName?.toLowerCase() || '';
       const technicianName = log.technicianName?.toLowerCase() || '';
       const scentName = log.scentId?.name?.toLowerCase() || '';
-
-      return customerName.includes(search) ||
-             branchName.includes(search) ||
-             technicianName.includes(search) ||
-             scentName.includes(search);
+      return branchName.includes(search) || technicianName.includes(search) || scentName.includes(search);
     }
-
     return true;
   });
 
-  // מיון לפי תאריך (החדש ביותר קודם)
-  const sortedLogs = [...filteredLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Already sorted by server (date: -1)
+  const sortedLogs = filteredLogs;
 
-  // סטטיסטיקות
+  // Stats from current page
   const totalMl = serviceLogs.reduce((sum, log) => sum + (log.mlFilled || 0), 0);
   const todayLogs = serviceLogs.filter(log => {
     const logDate = new Date(log.date);
@@ -520,6 +494,9 @@ export default function ServiceLogsPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setCurrentPage} />
 
       {/* מודל יצירה */}
       {showCreateModal && (

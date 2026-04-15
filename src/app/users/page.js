@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import { usersAPI } from '@/lib/api';
+import { useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   UserCog, Plus, Search, Mail, Phone, Shield, ChevronLeft, ChevronRight,
@@ -24,12 +26,12 @@ const roleColors = {
 export default function UsersPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { invalidateUsers } = useInvalidate();
 
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -51,31 +53,23 @@ export default function UsersPage() {
     }
   }, [user, router]);
 
-  useEffect(() => {
-    loadUsers();
-  }, [pagination.page, roleFilter]);
+  // SWR for paginated users
+  const userParams = useMemo(() => {
+    const params = new URLSearchParams({ page: currentPage, limit: 20 });
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (roleFilter) params.set('role', roleFilter);
+    return params.toString();
+  }, [currentPage, debouncedSearch, roleFilter]);
 
-  async function loadUsers() {
-    try {
-      setLoading(true);
-      const params = { page: pagination.page, limit: pagination.limit };
-      if (searchTerm) params.search = searchTerm;
-      if (roleFilter) params.role = roleFilter;
-
-      const result = await usersAPI.getAll(params);
-      setUsers(result.data || []);
-      setPagination(prev => ({ ...prev, total: result.pagination.total }));
-    } catch (err) {
-      console.error('Error loading users:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: userData, isLoading: usersLoading } = useSWR(`/users?${userParams}`);
+  const users = userData?.data || [];
+  const pagination = { page: currentPage, limit: 20, total: userData?.pagination?.total || 0 };
+  const loading = usersLoading && !userData;
 
   function handleSearch(e) {
     e.preventDefault();
-    setPagination(p => ({ ...p, page: 1 }));
-    loadUsers();
+    setDebouncedSearch(searchTerm);
+    setCurrentPage(1);
   }
 
   function openCreateModal() {
@@ -120,7 +114,7 @@ export default function UsersPage() {
       }
 
       setShowModal(false);
-      loadUsers();
+      invalidateUsers();
     } catch (err) {
       alert(err.message || 'שגיאה בשמירת משתמש');
     } finally {
@@ -136,7 +130,7 @@ export default function UsersPage() {
       } else {
         await usersAPI.update(u._id, { isActive: true });
       }
-      loadUsers();
+      invalidateUsers();
     } catch (err) {
       alert(err.message || 'שגיאה בעדכון');
     }
@@ -191,7 +185,7 @@ export default function UsersPage() {
           </div>
           <select
             value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+            onChange={(e) => { setRoleFilter(e.target.value); setCurrentPage(1); }}
             className="px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-(--color-primary)"
           >
             <option value="">כל התפקידים</option>
@@ -286,7 +280,7 @@ export default function UsersPage() {
       {totalPages > 1 && (
         <div className="flex justify-center items-center gap-4">
           <button
-            onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={pagination.page <= 1}
             className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
           >
@@ -296,7 +290,7 @@ export default function UsersPage() {
             עמוד {pagination.page} מתוך {totalPages}
           </span>
           <button
-            onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+            onClick={() => setCurrentPage(p => p + 1)}
             disabled={pagination.page >= totalPages}
             className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30"
           >

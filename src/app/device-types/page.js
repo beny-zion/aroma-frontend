@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { deviceTypesAPI } from '@/lib/api';
+import { useInvalidate } from '@/hooks/useData';
 import { Settings, Plus, Search, Edit3, Trash2, Package, AlertTriangle, Pause, Play } from 'lucide-react';
 
 export default function DeviceTypesPage() {
-  const [deviceTypes, setDeviceTypes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: deviceTypes = [], isLoading: loading } = useSWR('/device-types?all=true');
+  const { invalidateDeviceTypes } = useInvalidate();
+
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -31,22 +34,6 @@ export default function DeviceTypesPage() {
   // כמות להוספה למלאי
   const [stockToAdd, setStockToAdd] = useState('');
 
-  useEffect(() => {
-    loadDeviceTypes();
-  }, []);
-
-  async function loadDeviceTypes() {
-    try {
-      setLoading(true);
-      const data = await deviceTypesAPI.getAll();
-      setDeviceTypes(data);
-    } catch (err) {
-      console.error('Error loading device types:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function resetForm() {
     setFormData({
       name: '',
@@ -67,7 +54,7 @@ export default function DeviceTypesPage() {
     try {
       setSaving(true);
       await deviceTypesAPI.create(formData);
-      await loadDeviceTypes();
+      invalidateDeviceTypes();
       setShowCreateModal(false);
       resetForm();
     } catch (err) {
@@ -85,7 +72,7 @@ export default function DeviceTypesPage() {
     try {
       setSaving(true);
       await deviceTypesAPI.update(selectedDeviceType._id, formData);
-      await loadDeviceTypes();
+      invalidateDeviceTypes();
       setShowEditModal(false);
       setSelectedDeviceType(null);
       resetForm();
@@ -125,7 +112,7 @@ export default function DeviceTypesPage() {
     try {
       setSaving(true);
       await deviceTypesAPI.addStock(selectedDeviceType._id, parseInt(stockToAdd));
-      await loadDeviceTypes();
+      invalidateDeviceTypes();
       setShowAddStockModal(false);
       setSelectedDeviceType(null);
       setStockToAdd('');
@@ -141,7 +128,7 @@ export default function DeviceTypesPage() {
     try {
       setSaving(true);
       await deviceTypesAPI.update(deviceType._id, { isActive: !deviceType.isActive });
-      await loadDeviceTypes();
+      invalidateDeviceTypes();
     } catch (err) {
       console.error('Error toggling status:', err);
       alert('שגיאה בעדכון סטטוס');
@@ -156,7 +143,7 @@ export default function DeviceTypesPage() {
     try {
       setSaving(true);
       await deviceTypesAPI.delete(deviceType._id);
-      await loadDeviceTypes();
+      invalidateDeviceTypes();
     } catch (err) {
       console.error('Error deleting device type:', err);
       alert(err.message || 'שגיאה במחיקת סוג מכשיר');

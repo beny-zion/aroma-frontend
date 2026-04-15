@@ -1,20 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { customersAPI, branchesAPI, devicesAPI, scentsAPI, deviceTypesAPI } from '@/lib/api';
+import useSWR from 'swr';
+import { customersAPI, branchesAPI, devicesAPI } from '@/lib/api';
+import { useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
+import Pagination from '@/components/Pagination';
 import { Users, Plus, Search, Phone, Mail, Building2, Edit3, MapPin, CreditCard, X } from 'lucide-react';
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { scents } = useScents();
+  const { deviceTypes } = useActiveDeviceTypes();
+  const { invalidateCustomers, invalidateBranches, invalidateDevices } = useInvalidate();
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [scents, setScents] = useState([]);
-  const [deviceTypes, setDeviceTypes] = useState([]);
 
   // טופס יצירת לקוח חדש
   const [newCustomer, setNewCustomer] = useState({
@@ -53,41 +58,23 @@ export default function CustomersPage() {
   // טופס עריכת לקוח
   const [editCustomer, setEditCustomer] = useState(null);
 
+  // Debounce search
   useEffect(() => {
-    loadCustomers();
-    loadScents();
-    loadDeviceTypes();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  async function loadScents() {
-    try {
-      const data = await scentsAPI.getAll();
-      setScents(data);
-    } catch (err) {
-      // Error loading scents
-    }
-  }
+  // SWR for paginated customers
+  const customerParams = new URLSearchParams({ page: currentPage, limit: 20 });
+  if (debouncedSearch) customerParams.set('search', debouncedSearch);
 
-  async function loadDeviceTypes() {
-    try {
-      const data = await deviceTypesAPI.getAll({ isActive: true });
-      setDeviceTypes(data);
-    } catch (err) {
-      // Error loading device types
-    }
-  }
-
-  async function loadCustomers() {
-    try {
-      setLoading(true);
-      const data = await customersAPI.getAll();
-      setCustomers(data);
-    } catch (err) {
-      // Error loading customers
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: customerData, isLoading: customersLoading } = useSWR(`/customers?${customerParams.toString()}`);
+  const customers = customerData?.data || [];
+  const pagination = customerData?.pagination || null;
+  const loading = customersLoading && !customerData;
 
   async function viewCustomerDetails(customerId) {
     try {
@@ -151,7 +138,9 @@ export default function CustomersPage() {
         }
       }
 
-      await loadCustomers();
+      invalidateCustomers();
+      invalidateBranches();
+      invalidateDevices();
       setShowCreateModal(false);
       resetNewCustomerForm();
     } catch (err) {
@@ -263,7 +252,9 @@ export default function CustomersPage() {
         monthlyPrice: parseInt(editCustomer.monthlyPrice) || 0,
         billingDetails: editCustomer.billingDetails
       });
-      await loadCustomers();
+      invalidateCustomers();
+      invalidateBranches();
+      invalidateDevices();
       setShowEditModal(false);
       setEditCustomer(null);
     } catch (err) {
@@ -280,7 +271,9 @@ export default function CustomersPage() {
     try {
       setSaving(true);
       await customersAPI.update(selectedCustomer._id, { status: newStatus });
-      await loadCustomers();
+      invalidateCustomers();
+      invalidateBranches();
+      invalidateDevices();
       const updated = await customersAPI.getById(selectedCustomer._id);
       setSelectedCustomer(updated);
     } catch (err) {
@@ -290,13 +283,8 @@ export default function CustomersPage() {
     }
   }
 
-  const filteredCustomers = customers.filter(customer => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return customer.name?.toLowerCase().includes(search) ||
-           customer.billingDetails?.email?.toLowerCase().includes(search) ||
-           customer.billingDetails?.phone?.includes(search);
-  });
+  // Filtering is now server-side
+  const filteredCustomers = customers;
 
   const totalMonthly = customers.reduce((sum, c) => sum + (c.monthlyPrice || 0), 0);
 
@@ -654,6 +642,9 @@ export default function CustomersPage() {
           </div>
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setCurrentPage} />
 
       {/* מודל יצירת לקוח חדש */}
       {showCreateModal && (

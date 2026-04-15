@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { scentsAPI } from '@/lib/api';
+import { useInvalidate } from '@/hooks/useData';
 import { Droplets, Plus, Search, AlertTriangle, Package, TrendingUp } from 'lucide-react';
 
 export default function ScentsPage() {
-  const [scents, setScents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: scents = [], isLoading: loading } = useSWR('/scents?all=true');
+  const { invalidateScents } = useInvalidate();
+
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedScent, setSelectedScent] = useState(null);
@@ -20,29 +23,13 @@ export default function ScentsPage() {
     description: ''
   });
 
-  useEffect(() => {
-    loadScents();
-  }, []);
-
-  async function loadScents() {
-    try {
-      setLoading(true);
-      const data = await scentsAPI.getAll();
-      setScents(data);
-    } catch (err) {
-      console.error('Error loading scents:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleAddStock() {
     if (!selectedScent || !stockAmount || parseInt(stockAmount) <= 0) return;
 
     try {
       setSaving(true);
       await scentsAPI.addStock(selectedScent._id, parseInt(stockAmount));
-      await loadScents();
+      invalidateScents();
       setShowAddStockModal(false);
       setStockAmount('');
       setSelectedScent(null);
@@ -65,7 +52,7 @@ export default function ScentsPage() {
         stockQuantity: parseInt(newScent.stockQuantity) || 0,
         description: newScent.description
       });
-      await loadScents();
+      invalidateScents();
       setShowCreateModal(false);
       setNewScent({ name: '', stockQuantity: '', description: '' });
     } catch (err) {

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { workOrdersAPI } from '@/lib/api';
+import { useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ClipboardList, MapPin, Clock, CheckCircle, Play,
@@ -48,36 +50,21 @@ const typeLabels = {
 
 export default function MyTasksPage() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { invalidateWorkOrders } = useInvalidate();
   const [filter, setFilter] = useState('active'); // active | completed | all
   const [expandedTask, setExpandedTask] = useState(null);
   const [completionNotes, setCompletionNotes] = useState('');
 
-  useEffect(() => {
-    loadTasks();
-  }, [filter]);
-
-  async function loadTasks() {
-    try {
-      setLoading(true);
-      const params = {};
-      if (filter === 'active') params.status = 'assigned,in_progress';
-      else if (filter === 'completed') params.status = 'completed';
-
-      const result = await workOrdersAPI.getMy(params);
-      setTasks(result.data || []);
-    } catch (err) {
-      console.error('Error loading tasks:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // SWR key based on filter
+  const statusParam = filter === 'active' ? 'assigned,in_progress' : filter === 'completed' ? 'completed' : '';
+  const swrKey = statusParam ? `/work-orders/my?status=${statusParam}` : '/work-orders/my';
+  const { data: taskData, isLoading: loading } = useSWR(swrKey);
+  const tasks = taskData?.data || [];
 
   async function handleStartTask(taskId) {
     try {
       await workOrdersAPI.updateStatus(taskId, 'in_progress');
-      loadTasks();
+      invalidateWorkOrders();
     } catch (err) {
       alert(err.message || 'שגיאה בעדכון סטטוס');
     }
@@ -90,7 +77,7 @@ export default function MyTasksPage() {
       });
       setCompletionNotes('');
       setExpandedTask(null);
-      loadTasks();
+      invalidateWorkOrders();
     } catch (err) {
       alert(err.message || 'שגיאה בעדכון סטטוס');
     }

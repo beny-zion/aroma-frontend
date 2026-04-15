@@ -2,6 +2,7 @@ import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import LayoutShell from '@/components/LayoutShell';
 import PWARegister from '@/components/PWARegister';
+import SWRProvider from '@/components/SWRProvider';
 
 export const metadata = {
   title: 'ארומה פלוס - מערכת ניהול',
@@ -47,11 +48,13 @@ export default function RootLayout({ children }) {
     <html lang="he" dir="rtl">
       <body className="bg-gray-50 min-h-screen">
         <PWARegister />
-        <AuthProvider>
-          <LayoutShell>
-            {children}
-          </LayoutShell>
-        </AuthProvider>
+        <SWRProvider>
+          <AuthProvider>
+            <LayoutShell>
+              {children}
+            </LayoutShell>
+          </AuthProvider>
+        </SWRProvider>
       </body>
     </html>
   );
