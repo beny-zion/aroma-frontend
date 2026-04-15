@@ -7,6 +7,9 @@ import Sidebar from './Sidebar';
 import SplashScreen from './SplashScreen';
 import ServerLoadingScreen from './ServerLoadingScreen';
 import { LogOut } from 'lucide-react';
+import ChatButton from './chat/ChatButton';
+import ChatDrawer from './chat/ChatDrawer';
+import useChat from '@/hooks/useChat';
 
 const roleLabels = {
   admin: 'מנהל',
@@ -19,6 +22,9 @@ export default function LayoutShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [showSplash, setShowSplash] = useState(false);
+  const chat = useChat();
+
+  const showChat = user?.role === 'admin' || user?.role === 'manager';
 
   const isLoginPage = pathname === '/login';
   const shouldRedirectToHome = isLoginPage && !loading && user;
@@ -99,6 +105,29 @@ export default function LayoutShell({ children }) {
           </div>
         </main>
       </div>
+      {/* AI Chat - admin/manager only */}
+      {showChat && (
+        <>
+          <ChatButton isOpen={chat.isOpen} onClick={chat.toggleChat} />
+          <ChatDrawer
+            isOpen={chat.isOpen}
+            view={chat.view}
+            conversations={chat.conversations}
+            messages={chat.messages}
+            conversationTitle={chat.conversationTitle}
+            isLoading={chat.isLoading}
+            isSending={chat.isSending}
+            loadingConversations={chat.loadingConversations}
+            onClose={chat.closeChat}
+            onSendMessage={chat.sendMessage}
+            onSelectConversation={chat.selectConversation}
+            onNewConversation={chat.newConversation}
+            onArchiveConversation={chat.archiveConversation}
+            onLoadConversations={chat.loadConversations}
+            onGoToList={chat.goToList}
+          />
+        </>
+      )}
     </>
   );
 }

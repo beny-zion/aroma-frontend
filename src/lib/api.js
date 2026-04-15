@@ -142,6 +142,17 @@ export const adminAPI = {
   getDashboardStats: () => fetchAPI('/admin/stats'),
 };
 
+// ========== Chat ==========
+export const chatAPI = {
+  sendMessage: (data) => fetchAPI('/chat/message', { method: 'POST', body: JSON.stringify(data) }),
+  getConversations: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/chat/conversations${query ? `?${query}` : ''}`);
+  },
+  getConversation: (id) => fetchAPI(`/chat/conversations/${id}`),
+  archiveConversation: (id) => fetchAPI(`/chat/conversations/${id}`, { method: 'DELETE' }),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {
