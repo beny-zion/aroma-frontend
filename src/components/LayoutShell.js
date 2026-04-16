@@ -10,6 +10,7 @@ import { LogOut } from 'lucide-react';
 import ChatButton from './chat/ChatButton';
 import ChatDrawer from './chat/ChatDrawer';
 import useChat from '@/hooks/useChat';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const roleLabels = {
   admin: 'מנהל',
@@ -23,12 +24,15 @@ export default function LayoutShell({ children }) {
   const router = useRouter();
   const [showSplash, setShowSplash] = useState(false);
   const chat = useChat();
+  useAnalytics();
 
   const showChat = user?.role === 'admin' || user?.role === 'manager';
 
   const isLoginPage = pathname === '/login';
+  const isAdminAnalytics = pathname?.startsWith('/admin');
+  const isPublicPage = isLoginPage || isAdminAnalytics;
   const shouldRedirectToHome = isLoginPage && !loading && user;
-  const shouldRedirectToLogin = !isLoginPage && !loading && !user;
+  const shouldRedirectToLogin = !isPublicPage && !loading && !user;
 
   useEffect(() => {
     if (shouldRedirectToHome) {
@@ -57,13 +61,13 @@ export default function LayoutShell({ children }) {
     await logout();
   };
 
-  // Full-screen loading during initial auth check (skip for login page)
-  if ((!isLoginPage && loading) || shouldRedirectToHome || shouldRedirectToLogin) {
+  // Full-screen loading during initial auth check (skip for public pages)
+  if ((!isPublicPage && loading) || shouldRedirectToHome || shouldRedirectToLogin) {
     return <ServerLoadingScreen />;
   }
 
-  // Login page - no sidebar, full screen
-  if (isLoginPage) {
+  // Public pages (login, admin analytics) - no sidebar, full screen
+  if (isPublicPage) {
     return <>{children}</>;
   }
 

@@ -153,6 +153,33 @@ export const chatAPI = {
   archiveConversation: (id) => fetchAPI(`/chat/conversations/${id}`, { method: 'DELETE' }),
 };
 
+// ========== Analytics Admin ==========
+function analyticsHeaders() {
+  const password = typeof window !== 'undefined'
+    ? sessionStorage.getItem('analytics_admin_password')
+    : null;
+  return password ? { 'x-analytics-key': password } : {};
+}
+
+export const analyticsAPI = {
+  verifyPassword: (password) => fetchAPI('/analytics/admin/verify', {
+    method: 'POST',
+    headers: { 'x-analytics-key': password }
+  }),
+  getOverview: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/analytics/admin/overview${query ? `?${query}` : ''}`, {
+      headers: analyticsHeaders()
+    });
+  },
+  getEvents: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/analytics/admin/events${query ? `?${query}` : ''}`, {
+      headers: analyticsHeaders()
+    });
+  }
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {
