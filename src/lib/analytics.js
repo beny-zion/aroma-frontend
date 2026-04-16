@@ -47,6 +47,33 @@ function getScreenResolution() {
   return `${window.screen.width}x${window.screen.height}`;
 }
 
+// Device fingerprint - unique per physical device (even on same network)
+function getDeviceFingerprint() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const parts = [
+      window.screen.width,
+      window.screen.height,
+      window.screen.colorDepth,
+      window.devicePixelRatio || 1,
+      navigator.language,
+      navigator.hardwareConcurrency || 'x',
+      navigator.maxTouchPoints || 0,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.platform || ''
+    ];
+    const str = parts.join('|');
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return 'df_' + Math.abs(hash).toString(36);
+  } catch {
+    return null;
+  }
+}
+
 export function trackEvent(type, data = {}) {
   if (typeof window === 'undefined') return;
 
@@ -54,6 +81,7 @@ export function trackEvent(type, data = {}) {
     type,
     sessionId: getSessionId(),
     screenResolution: getScreenResolution(),
+    deviceFingerprint: getDeviceFingerprint(),
     timestamp: new Date().toISOString(),
     ...data
   });

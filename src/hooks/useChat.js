@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { chatAPI } from '@/lib/api';
+import { trackEvent } from '@/lib/analytics';
 
 export default function useChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +17,10 @@ export default function useChat() {
   const abortRef = useRef(null);
 
   const toggleChat = useCallback(() => {
-    setIsOpen(prev => !prev);
+    setIsOpen(prev => {
+      if (!prev) trackEvent('action', { action: 'chat_opened' });
+      return !prev;
+    });
   }, []);
 
   const closeChat = useCallback(() => {
@@ -59,6 +63,9 @@ export default function useChat() {
 
   const sendMessage = useCallback(async (text) => {
     if (!text.trim() || isSending) return;
+
+    // Track AI chat usage
+    trackEvent('action', { action: 'chat_message_sent', metadata: { isNewConversation: !activeConversationId } });
 
     // Add user message optimistically
     const userMsg = { role: 'user', content: text, timestamp: new Date().toISOString() };

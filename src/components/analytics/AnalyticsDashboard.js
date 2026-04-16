@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   BarChart3, Eye, Users, Activity, Zap,
   RefreshCw, Monitor, Smartphone, Tablet, HelpCircle,
-  Clock, Globe, Shield, LogOut, Wifi
+  Clock, Globe, Shield, LogOut, Wifi, MessageCircle, Fingerprint
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -70,6 +70,11 @@ const PAGE_LABELS = {
   '/users': 'משתמשים',
   '/device-types': 'סוגי מכשירים',
   '/login': 'כניסה'
+};
+
+const ACTION_LABELS = {
+  'chat_opened': 'פתיחת צ׳אט AI',
+  'chat_message_sent': 'שליחת הודעה ב-AI',
 };
 
 // Format date in Israel timezone
@@ -158,7 +163,7 @@ export default function AnalyticsDashboard() {
 
   if (!data) return null;
 
-  const { kpis, dailyTrend, deviceBreakdown, topPages, topVisitors, hourlyHeatmap, roleBreakdown, browserBreakdown } = data;
+  const { kpis, dailyTrend, deviceBreakdown, topPages, topVisitors, hourlyHeatmap, roleBreakdown, browserBreakdown, chatUsage } = data;
 
   return (
     <div dir="rtl" className="min-h-screen" style={{ background: '#F9FAFB' }}>
@@ -221,11 +226,12 @@ export default function AnalyticsDashboard() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <KPIBox icon={Eye} label="סה״כ אירועים" value={kpis.totalEvents} color="#6B8E7B" bg="#F0F5F2" />
           <KPIBox icon={Wifi} label="מבקרים ייחודיים (IP)" value={kpis.uniqueVisitors} color="#3B82F6" bg="#EFF6FF" />
-          <KPIBox icon={Activity} label="סשנים ייחודיים" value={kpis.uniqueSessions} color="#8B5CF6" bg="#F5F3FF" />
-          <KPIBox icon={Zap} label="ממוצע אירועים/סשן" value={kpis.avgEventsPerSession} color="#F59E0B" bg="#FFFBEB" />
+          <KPIBox icon={Fingerprint} label="מכשירים ייחודיים" value={kpis.uniqueDevices || 0} color="#8B5CF6" bg="#F5F3FF" />
+          <KPIBox icon={Activity} label="סשנים ייחודיים" value={kpis.uniqueSessions} color="#F59E0B" bg="#FFFBEB" />
+          <KPIBox icon={Zap} label="ממוצע אירועים/סשן" value={kpis.avgEventsPerSession} color="#EF4444" bg="#FEF2F2" />
         </div>
 
         {/* Daily Trend Chart */}
@@ -370,6 +376,9 @@ export default function AnalyticsDashboard() {
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-400">
                         <span>{v.sessionsCount} סשנים</span>
                         <span>{v.pagesVisited} עמודים</span>
+                        {v.uniqueDevicesCount > 1 && (
+                          <span className="text-purple-500 font-medium">{v.uniqueDevicesCount} מכשירים</span>
+                        )}
                         <span>{v.devices?.filter(Boolean).map(d => DEVICE_LABELS[d] || d).join(', ')}</span>
                         <span>{v.browsers?.filter(Boolean).join(', ')}</span>
                       </div>
@@ -412,6 +421,42 @@ export default function AnalyticsDashboard() {
             labelMap={{}}
           />
         </div>
+
+        {/* AI Chat Usage */}
+        {chatUsage && chatUsage.length > 0 && (
+          <ChartCard title="שימוש בצ׳אט AI" icon={MessageCircle}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(() => {
+                const opened = chatUsage.find(c => c._id === 'chat_opened');
+                const msgSent = chatUsage.find(c => c._id === 'chat_message_sent');
+                const totalOpens = opened?.count || 0;
+                const totalMessages = msgSent?.count || 0;
+                const uniqueChatUsers = msgSent?.uniqueUsers || opened?.uniqueUsers || 0;
+                const avgPerUser = uniqueChatUsers > 0 ? Math.round(totalMessages / uniqueChatUsers) : 0;
+                return (
+                  <>
+                    <div className="bg-purple-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-purple-700">{totalOpens.toLocaleString('he-IL')}</p>
+                      <p className="text-sm text-purple-500 mt-1">פתיחות צ׳אט</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-blue-700">{totalMessages.toLocaleString('he-IL')}</p>
+                      <p className="text-sm text-blue-500 mt-1">הודעות שנשלחו</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-green-700">{uniqueChatUsers.toLocaleString('he-IL')}</p>
+                      <p className="text-sm text-green-500 mt-1">משתמשי AI ייחודיים</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-4 text-center">
+                      <p className="text-2xl font-bold text-amber-700">{avgPerUser}</p>
+                      <p className="text-sm text-amber-500 mt-1">הודעות/משתמש</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </ChartCard>
+        )}
 
         {/* Events Log */}
         <ChartCard title="לוג אירועים" icon={Activity}>
@@ -469,10 +514,12 @@ export default function AnalyticsDashboard() {
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                             ev.type === 'page_view' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
                           }`}>
-                            {ev.type === 'page_view' ? 'צפייה' : 'פעולה'}
+                            {ev.type === 'page_view' ? 'צפייה' : (ev.action?.startsWith('chat_') ? 'AI צ׳אט' : 'פעולה')}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-gray-700">{PAGE_LABELS[ev.page] || ev.page}</td>
+                        <td className="py-2 px-3 text-gray-700">
+                          {ev.type === 'action' && ev.action ? (ACTION_LABELS[ev.action] || ev.action) : (PAGE_LABELS[ev.page] || ev.page)}
+                        </td>
                         <td className="py-2 px-3 text-gray-500 font-mono text-xs">{ev.ipAddress || '-'}</td>
                         <td className="py-2 px-3 text-gray-600">{ev.userName || 'אנונימי'}</td>
                         <td className="py-2 px-3 text-gray-600">{DEVICE_LABELS[ev.deviceType] || ev.deviceType}</td>
@@ -491,13 +538,15 @@ export default function AnalyticsDashboard() {
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                         ev.type === 'page_view' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
                       }`}>
-                        {ev.type === 'page_view' ? 'צפייה' : 'פעולה'}
+                        {ev.type === 'page_view' ? 'צפייה' : (ev.action?.startsWith('chat_') ? 'AI צ׳אט' : 'פעולה')}
                       </span>
                       <span className="text-xs text-gray-400">
                         {formatIsraelTime(ev.timestamp)}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-gray-700">{PAGE_LABELS[ev.page] || ev.page}</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      {ev.type === 'action' && ev.action ? (ACTION_LABELS[ev.action] || ev.action) : (PAGE_LABELS[ev.page] || ev.page)}
+                    </p>
                     <p className="text-xs text-gray-500 font-mono">{ev.ipAddress || '-'}</p>
                     <p className="text-xs text-gray-500">{ev.userName || 'אנונימי'} · {DEVICE_LABELS[ev.deviceType] || ev.deviceType} · {ev.browser}</p>
                   </div>
