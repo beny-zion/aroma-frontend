@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import StatusBadge from '@/components/StatusBadge';
 import RefillProgressBar from '@/components/RefillProgressBar';
+import VisitsPanel from '@/components/VisitsPanel';
 import {
   Droplets, MapPin, Calendar, Wrench, PlusCircle, MinusCircle,
   RefreshCw, ArrowRight, Loader2, Clock, User, FileText
@@ -211,6 +212,9 @@ export default function DeviceDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ביקורים והזמנות עבודה הכוללות מכשיר זה */}
+      <VisitsPanel deviceId={device._id} title="הזמנות עבודה הכוללות מכשיר זה" />
 
       {/* היסטוריית שירות */}
       <div>

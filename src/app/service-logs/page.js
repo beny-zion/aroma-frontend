@@ -5,7 +5,8 @@ import useSWR from 'swr';
 import { serviceLogsAPI } from '@/lib/api';
 import { useAllDevices, useBranches, useScents, useInvalidate } from '@/hooks/useData';
 import Pagination from '@/components/Pagination';
-import { FileText, Plus, Search, Calendar, Droplets, User, Eye, Edit3, Trash2, Filter, X, ClipboardList, Beaker } from 'lucide-react';
+import { FileText, Plus, Search, Calendar, Droplets, User, Eye, Edit3, Trash2, Filter, X, ClipboardList, Beaker, Camera } from 'lucide-react';
+import { thumbnailUrl } from '@/lib/cloudinary';
 
 export default function ServiceLogsPage() {
   // Shared dropdown data (cached via SWR)
@@ -27,6 +28,7 @@ export default function ServiceLogsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   // טופס
   const [formData, setFormData] = useState({
@@ -340,6 +342,7 @@ export default function ServiceLogsPage() {
               <th>ריח</th>
               <th>כמות</th>
               <th>טכנאי</th>
+              <th>תמונות</th>
               <th>פעולות</th>
             </tr>
           </thead>
@@ -376,6 +379,25 @@ export default function ServiceLogsPage() {
                 </td>
                 <td style={{ color: 'var(--color-text-secondary)' }}>
                   {log.technicianName || '-'}
+                </td>
+                <td>
+                  {log.images?.length > 0 ? (
+                    <button
+                      onClick={() => setLightboxImage(log.images[0])}
+                      className="flex items-center gap-1.5 text-xs hover:opacity-70"
+                      style={{ color: 'var(--color-primary)' }}
+                      title={`${log.images.length} תמונות`}
+                    >
+                      <img
+                        src={thumbnailUrl(log.images[0], 80)}
+                        alt="תמונה"
+                        className="w-10 h-10 rounded-lg object-cover border"
+                      />
+                      {log.images.length > 1 && <span className="font-medium">+{log.images.length - 1}</span>}
+                    </button>
+                  ) : (
+                    <span style={{ color: 'var(--color-text-muted)' }}>-</span>
+                  )}
                 </td>
                 <td>
                   <div className="flex items-center gap-1.5">
@@ -466,6 +488,24 @@ export default function ServiceLogsPage() {
                   <span className="tag">{log.deviceId.deviceType}</span>
                 )}
               </div>
+
+              {log.images?.length > 0 && (
+                <div className="flex gap-2 mb-3 overflow-x-auto">
+                  {log.images.map((url, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setLightboxImage(url)}
+                      className="shrink-0"
+                    >
+                      <img
+                        src={thumbnailUrl(url, 120)}
+                        alt={`תמונה ${idx + 1}`}
+                        className="w-14 h-14 rounded-lg object-cover border"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
                 <button
@@ -716,6 +756,28 @@ export default function ServiceLogsPage() {
         </div>
       )}
 
+      {/* Lightbox - תצוגת תמונה מלאה */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center"
+            aria-label="סגור"
+          >
+            <X size={22} />
+          </button>
+          <img
+            src={thumbnailUrl(lightboxImage, 1600)}
+            alt="תצוגה מלאה"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {/* מודל פרטים */}
       {showDetailsModal && selectedLog && (
         <div className="modal-overlay">
@@ -794,6 +856,30 @@ export default function ServiceLogsPage() {
                     <span className="text-xs">הערות</span>
                   </div>
                   <div className="p-3 rounded-xl text-sm" style={{ background: 'var(--color-bg)' }}>{selectedLog.technicianNotes}</div>
+                </div>
+              )}
+
+              {selectedLog.images?.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2" style={{ color: 'var(--color-text-muted)' }}>
+                    <Camera size={14} />
+                    <span className="text-xs">תמונות ({selectedLog.images.length})</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedLog.images.map((url, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setLightboxImage(url)}
+                        className="aspect-square rounded-xl overflow-hidden border hover:opacity-80 transition-opacity"
+                      >
+                        <img
+                          src={thumbnailUrl(url, 300)}
+                          alt={`תמונה ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

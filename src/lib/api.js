@@ -180,6 +180,12 @@ export const analyticsAPI = {
   }
 };
 
+// ========== Schedule (weekly route planning) ==========
+export const scheduleAPI = {
+  suggest: (data) => fetchAPI('/schedule/suggest', { method: 'POST', body: JSON.stringify(data) }),
+  save: (data) => fetchAPI('/schedule/save', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {

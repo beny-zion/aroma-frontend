@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { workOrdersAPI } from '@/lib/api';
-import { useBranches, useTechnicians, useInvalidate } from '@/hooks/useData';
+import { useBranches, useTechnicians, useAllDevices, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   ClipboardList, Plus, Filter, Calendar, User, MapPin,
@@ -63,6 +63,7 @@ export default function WorkOrdersPage() {
   // Shared dropdown data (cached via SWR)
   const { branches } = useBranches();
   const { technicians } = useTechnicians();
+  const { devices: allDevices } = useAllDevices();
   const { invalidateWorkOrders } = useInvalidate();
 
   // Filters
@@ -89,10 +90,32 @@ export default function WorkOrdersPage() {
     notes: '',
     estimatedDuration: ''
   });
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState([]);
+
+  // Devices belonging to the currently selected branch
+  const branchDevices = useMemo(() => {
+    if (!newOrder.branchId) return [];
+    return allDevices.filter(d => (d.branchId?._id || d.branchId) === newOrder.branchId && d.isActive);
+  }, [allDevices, newOrder.branchId]);
+
+  // When the branch changes, default to selecting all its devices
+  useEffect(() => {
+    setSelectedDeviceIds(branchDevices.map(d => d._id));
+  }, [branchDevices]);
 
   // Detail modal
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Auto-generate modal
+  const [showAutoGenModal, setShowAutoGenModal] = useState(false);
+  const [autoGenDate, setAutoGenDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [autoGenSubmitting, setAutoGenSubmitting] = useState(false);
+  const [autoGenResult, setAutoGenResult] = useState(null);
 
   // Redirect technicians to my-tasks
   useEffect(() => {
@@ -122,16 +145,25 @@ export default function WorkOrdersPage() {
 
     try {
       setSaving(true);
+      const devicesPayload = selectedDeviceIds.map(id => {
+        const d = allDevices.find(dev => dev._id === id);
+        return {
+          deviceId: id,
+          taskDescription: d ? `מילוי ${d.deviceType}${d.locationInBranch ? ' - ' + d.locationInBranch : ''}` : 'מילוי מכשיר'
+        };
+      });
       await workOrdersAPI.create({
         ...newOrder,
         estimatedDuration: newOrder.estimatedDuration ? Number(newOrder.estimatedDuration) : undefined,
-        assignedTo: newOrder.assignedTo || undefined
+        assignedTo: newOrder.assignedTo || undefined,
+        devices: devicesPayload
       });
       setShowCreateModal(false);
       setNewOrder({
         branchId: '', assignedTo: '', scheduledDate: '', priority: 'medium',
         type: 'routine_refill', notes: '', estimatedDuration: ''
       });
+      setSelectedDeviceIds([]);
       invalidateWorkOrders();
     } catch (err) {
       alert(err.message || 'שגיאה ביצירת הזמנת עבודה');
@@ -140,14 +172,35 @@ export default function WorkOrdersPage() {
     }
   }
 
+  function toggleDevice(id) {
+    setSelectedDeviceIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  }
+
+  function openAutoGenModal() {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    setAutoGenDate(d.toISOString().slice(0, 10));
+    setAutoGenResult(null);
+    setShowAutoGenModal(true);
+  }
+
+  function closeAutoGenModal() {
+    setShowAutoGenModal(false);
+    setAutoGenResult(null);
+  }
+
   async function handleAutoGenerate() {
-    if (!confirm('ליצור הזמנות עבודה אוטומטיות לכל המכשירים שצריכים מילוי?')) return;
     try {
-      const result = await workOrdersAPI.autoGenerate({});
-      alert(result.message);
+      setAutoGenSubmitting(true);
+      const result = await workOrdersAPI.autoGenerate({ targetDate: autoGenDate });
+      setAutoGenResult({ count: result.data?.length || 0, message: result.message });
       invalidateWorkOrders();
     } catch (err) {
-      alert(err.message || 'שגיאה ביצירה אוטומטית');
+      setAutoGenResult({ error: err.message || 'שגיאה ביצירה אוטומטית' });
+    } finally {
+      setAutoGenSubmitting(false);
     }
   }
 
@@ -209,7 +262,7 @@ export default function WorkOrdersPage() {
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button
-            onClick={handleAutoGenerate}
+            onClick={openAutoGenModal}
             className="flex items-center gap-2 px-4 py-2 border rounded-xl text-sm hover:bg-gray-50 transition-colors"
             style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
           >
@@ -413,6 +466,92 @@ export default function WorkOrdersPage() {
         </div>
       )}
 
+      {/* Auto-Generate Modal */}
+      {showAutoGenModal && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md w-full">
+            <div className="modal-header">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <h2 className="text-xl font-bold">יצירה אוטומטית של הזמנות עבודה</h2>
+              </div>
+              <button onClick={closeAutoGenModal} className="modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {!autoGenResult ? (
+                <>
+                  <p className="text-sm text-gray-600">
+                    תיצור הזמנות עבודה לכל הסניפים עם מכשירים שצריכים מילוי עד לתאריך הנבחר.
+                    סניפים עם הזמנה פתוחה (מילוי שוטף) לא ייכללו.
+                  </p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">תאריך יעד *</label>
+                    <input
+                      type="date"
+                      value={autoGenDate}
+                      onChange={(e) => setAutoGenDate(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-(--color-primary)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      ייווצרו הזמנות לכל מכשיר שתאריך המילוי המתוכנן שלו עד לתאריך זה.
+                    </p>
+                  </div>
+                </>
+              ) : autoGenResult.error ? (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center bg-red-100 mb-3">
+                    <XCircle className="w-8 h-8 text-red-600" />
+                  </div>
+                  <p className="font-medium text-gray-800">שגיאה ביצירה</p>
+                  <p className="text-sm text-gray-500 mt-2">{autoGenResult.error}</p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--color-primary-50)' }}>
+                    <CheckCircle className="w-8 h-8" style={{ color: 'var(--color-primary)' }} />
+                  </div>
+                  <p className="font-medium text-gray-800">
+                    {autoGenResult.count > 0
+                      ? `נוצרו ${autoGenResult.count} הזמנות עבודה חדשות`
+                      : 'לא נוצרו הזמנות חדשות'}
+                  </p>
+                  {autoGenResult.count === 0 && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      ייתכן שכל הסניפים כבר עם הזמנה פתוחה, או שאין מכשירים שדורשים מילוי בתאריך זה.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              {!autoGenResult ? (
+                <>
+                  <button onClick={closeAutoGenModal} className="btn-secondary" disabled={autoGenSubmitting}>
+                    ביטול
+                  </button>
+                  <button
+                    onClick={handleAutoGenerate}
+                    disabled={!autoGenDate || autoGenSubmitting}
+                    className="btn-primary disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                    {autoGenSubmitting ? 'יוצר...' : 'צור הזמנות'}
+                  </button>
+                </>
+              ) : (
+                <button onClick={closeAutoGenModal} className="btn-primary">
+                  סגור
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Modal */}
       {showCreateModal && (
         <div className="modal-overlay">
@@ -453,6 +592,63 @@ export default function WorkOrdersPage() {
                   {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
                 </select>
               </div>
+
+              {/* Device selection — only after a branch is chosen */}
+              {newOrder.branchId && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      מכשירים ({selectedDeviceIds.length} / {branchDevices.length})
+                    </label>
+                    {branchDevices.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedDeviceIds(
+                            selectedDeviceIds.length === branchDevices.length
+                              ? []
+                              : branchDevices.map(d => d._id)
+                          )
+                        }
+                        className="text-xs hover:underline"
+                        style={{ color: 'var(--color-primary)' }}
+                      >
+                        {selectedDeviceIds.length === branchDevices.length ? 'נקה הכל' : 'בחר הכל'}
+                      </button>
+                    )}
+                  </div>
+                  {branchDevices.length === 0 ? (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+                      אין מכשירים פעילים בסניף זה
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-xl divide-y max-h-48 overflow-y-auto">
+                      {branchDevices.map(d => (
+                        <label
+                          key={d._id}
+                          className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedDeviceIds.includes(d._id)}
+                            onChange={() => toggleDevice(d._id)}
+                            className="w-4 h-4 accent-(--color-primary)"
+                          />
+                          <div className="flex-1 text-sm">
+                            <div className="font-medium text-gray-800">
+                              {d.deviceType}
+                              {d.locationInBranch && <span className="text-gray-500 font-normal"> · {d.locationInBranch}</span>}
+                            </div>
+                            {d.scentId?.name && (
+                              <div className="text-xs text-gray-500 mt-0.5">ריח: {d.scentId.name}</div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>

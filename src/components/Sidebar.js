@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Cpu, Users, Building2, Droplets,
   PlusCircle, FileText, ClipboardList, UserCog, Settings,
-  LogOut, Menu, X
+  LogOut, Menu, X, CalendarDays
 } from 'lucide-react';
 
 const roleLabels = {
@@ -36,6 +36,7 @@ export default function Sidebar() {
         { href: '/refill', label: 'ביצוע מילוי', icon: PlusCircle, highlight: true },
         { href: '/service-logs', label: 'יומן שירות', icon: FileText },
         { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager'] },
+        { href: '/schedule', label: 'מסלול שבועי', icon: CalendarDays, roles: ['admin', 'manager'] },
         { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
       ]
     },
@@ -156,7 +157,7 @@ export default function Sidebar() {
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white shadow-lg min-h-screen fixed right-0 z-40 border-l border-[var(--color-border-light)]">
+      <aside className="hidden md:flex flex-col w-64 bg-white shadow-lg h-screen fixed right-0 top-0 z-40 border-l border-[var(--color-border-light)]">
         {/* Logo */}
         <div className="p-6 border-b border-[var(--color-border-light)]">
           <div className="flex items-center gap-3">

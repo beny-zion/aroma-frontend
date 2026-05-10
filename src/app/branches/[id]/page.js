@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import StatusBadge from '@/components/StatusBadge';
 import RefillProgressBar from '@/components/RefillProgressBar';
+import VisitsPanel from '@/components/VisitsPanel';
 import {
   Building2, MapPin, Phone, User, Droplets, Eye,
   ArrowRight, Loader2, Calendar
@@ -150,6 +151,9 @@ export default function BranchDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ביקורים והזמנות עבודה */}
+      <VisitsPanel branchId={branch._id} title="ביקורים והזמנות עבודה" />
 
       {/* מכשירים בסניף */}
       <div>

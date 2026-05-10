@@ -39,6 +39,17 @@ export default function BranchesPage() {
     visitIntervalDays: 45,
     useCustomerAddress: true
   });
+  // האם שם הסניף מתמלא אוטומטית (true עד שמשתמש משנה אותו ידנית)
+  const [branchNameAutoFilled, setBranchNameAutoFilled] = useState(true);
+
+  // בנייה אוטומטית של שם הסניף מ"שם לקוח + עיר"
+  function buildBranchName(customerId, city) {
+    const customer = customers.find(c => c._id === customerId);
+    const customerName = customer?.name?.trim() || '';
+    const cityTrimmed = city?.trim() || '';
+    if (customerName && cityTrimmed) return `${customerName} ${cityTrimmed}`;
+    return customerName || cityTrimmed || '';
+  }
 
   // כתובת הלקוח הנבחר
   const [selectedCustomerAddress, setSelectedCustomerAddress] = useState('');
@@ -133,6 +144,7 @@ export default function BranchesPage() {
         visitIntervalDays: 45,
         useCustomerAddress: true
       });
+      setBranchNameAutoFilled(true);
       setSelectedCustomerAddress('');
     } catch (err) {
       console.error('Error creating branch:', err);
@@ -144,13 +156,30 @@ export default function BranchesPage() {
 
   // עדכון כתובת לקוח כאשר בוחרים לקוח
   function handleCustomerChange(customerId) {
-    setNewBranch({ ...newBranch, customerId });
+    const updates = { ...newBranch, customerId };
+    if (branchNameAutoFilled) {
+      updates.branchName = buildBranchName(customerId, newBranch.city);
+    }
+    setNewBranch(updates);
     const customer = customers.find(c => c._id === customerId);
     if (customer && customer.billingDetails?.address) {
       setSelectedCustomerAddress(customer.billingDetails.address);
     } else {
       setSelectedCustomerAddress('');
     }
+  }
+
+  function handleCityChange(city) {
+    const updates = { ...newBranch, city };
+    if (branchNameAutoFilled) {
+      updates.branchName = buildBranchName(newBranch.customerId, city);
+    }
+    setNewBranch(updates);
+  }
+
+  function handleBranchNameChange(name) {
+    setBranchNameAutoFilled(false);
+    setNewBranch({ ...newBranch, branchName: name });
   }
 
   async function viewBranchDetails(branchId) {
@@ -835,8 +864,8 @@ export default function BranchesPage() {
                 <input
                   type="text"
                   value={newBranch.branchName}
-                  onChange={(e) => setNewBranch({ ...newBranch, branchName: e.target.value })}
-                  placeholder="לדוגמה: סניף ראשי"
+                  onChange={(e) => handleBranchNameChange(e.target.value)}
+                  placeholder="ימולא אוטומטית מהלקוח והעיר — אפשר לערוך"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-(--color-primary) focus:border-transparent"
                   required
                 />
@@ -850,7 +879,7 @@ export default function BranchesPage() {
                   <input
                     type="text"
                     value={newBranch.city}
-                    onChange={(e) => setNewBranch({ ...newBranch, city: e.target.value })}
+                    onChange={(e) => handleCityChange(e.target.value)}
                     placeholder="עיר"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-(--color-primary) focus:border-transparent"
                   />
@@ -864,9 +893,12 @@ export default function BranchesPage() {
                     type="text"
                     value={newBranch.region}
                     onChange={(e) => setNewBranch({ ...newBranch, region: e.target.value })}
-                    placeholder="צפון/מרכז/דרום"
+                    placeholder="לדוגמה: רוממה, גוש דן"
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-(--color-primary) focus:border-transparent"
                   />
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>
+                    משמש לקיבוץ סניפים במסלול השבועי. אם ריק - תשמש העיר.
+                  </p>
                 </div>
               </div>
 

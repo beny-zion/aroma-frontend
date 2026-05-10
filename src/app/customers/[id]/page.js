@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Breadcrumb from '@/components/shared/Breadcrumb';
+import VisitsPanel from '@/components/VisitsPanel';
 import {
   Users, Phone, Mail, Building2, CreditCard, MapPin,
   ArrowRight, Edit3, Eye, Loader2
@@ -127,6 +128,9 @@ export default function CustomerDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ביקורים והזמנות עבודה (כל הסניפים) */}
+      <VisitsPanel customerId={customer._id} title="ביקורים בכל הסניפים" />
 
       {/* סניפים */}
       <div>
