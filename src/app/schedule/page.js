@@ -108,6 +108,19 @@ function groupBlocksByCity(blocks) {
   return [...map.entries()].map(([city, blocks]) => ({ city, blocks }));
 }
 
+// Group blocks within a single day by city+region — each group becomes one
+// collapsible row in the column (so 9 blocks of "ירושלים | אזור גאולה" show
+// as one card instead of 9).
+function groupBlocksByRegion(blocks) {
+  const map = new Map();
+  for (const blk of blocks) {
+    const key = `${blk.city}::${blk.region || ''}`;
+    if (!map.has(key)) map.set(key, { city: blk.city, region: blk.region, blocks: [] });
+    map.get(key).blocks.push(blk);
+  }
+  return [...map.values()];
+}
+
 function CityGroupHandle({ city, blocks, dayDate, isOverlay = false }) {
   const colors = cityColors(city);
   const totalBranches = blocks.reduce((s, b) => s + b.branches.length, 0);
@@ -230,6 +243,86 @@ function BlockCard({ block, expanded, onToggle, isOverlay = false }) {
   );
 }
 
+// One collapsible card per city+region inside a day. Replaces stacking many
+// 1-branch BlockCards. Header shows region + total counts and is the drag
+// handle. Body lists every branch across the contained blocks.
+function RegionGroup({ city, region, blocks, dayDate, expanded, onToggle, isOverlay = false }) {
+  const colors = cityColors(city);
+  const totalBranches = blocks.reduce((s, b) => s + b.branches.length, 0);
+  const totalDevices = blocks.reduce((s, b) => s + (b.devicesCount || 0), 0);
+  const allBranches = blocks.flatMap(b => b.branches.map(br => ({ ...br, blockId: b.id })));
+  const isExisting = blocks.every(b => b.existingWorkOrderId);
+  const isMixed = !isExisting && blocks.some(b => b.existingWorkOrderId);
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `region-group:${city}::${region || ''}:${dayDate}`,
+    data: { type: 'region-group', city, region: region || '', sourceDayDate: dayDate, blockIds: blocks.map(b => b.id) }
+  });
+
+  const label = region ? `${city} · ${region}` : city;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-xl border overflow-hidden ${isDragging ? 'opacity-30' : ''} ${isOverlay ? 'shadow-xl rotate-1' : ''}`}
+      style={{
+        borderColor: colors.accent + '50',
+        backgroundColor: colors.bg,
+        borderRightWidth: '4px',
+        borderRightColor: colors.accent,
+        borderStyle: isExisting ? 'solid' : 'dashed'
+      }}
+    >
+      {/* Header — drag handle + click-to-expand on the chevron */}
+      <div
+        {...listeners}
+        {...attributes}
+        className="px-3 py-2 cursor-grab active:cursor-grabbing"
+        style={{ touchAction: 'pan-y' }}
+      >
+        <div className="flex items-center gap-2">
+          <GripVertical className="w-3.5 h-3.5 shrink-0 opacity-50" style={{ color: colors.accent }} />
+          {isExisting && <Bookmark className="w-3.5 h-3.5 shrink-0" style={{ color: colors.accent }} />}
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-sm text-gray-800 truncate">{label}</div>
+            <div className="text-[11px] text-gray-600 mt-0.5 flex items-center gap-2 font-tabular">
+              <span>{totalBranches} סניפים</span>
+              <span className="text-gray-400">·</span>
+              <span>{totalDevices} מכשירים</span>
+              {isMixed && (
+                <span className="text-[10px] px-1.5 py-0 rounded bg-amber-100 text-amber-800 font-medium">מעורב</span>
+              )}
+            </div>
+          </div>
+          {!isOverlay && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="shrink-0 p-1.5 rounded hover:bg-white/60"
+              aria-label={expanded ? 'כווץ' : 'הרחב'}
+            >
+              {expanded ? <ChevronUp className="w-4 h-4 text-gray-600" /> : <ChevronDown className="w-4 h-4 text-gray-600" />}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Expanded body — list of all branches across blocks in this region */}
+      {expanded && !isOverlay && (
+        <div className="border-t px-3 py-2 space-y-0.5 bg-white/60" style={{ borderColor: 'var(--color-border-light)' }}>
+          {allBranches.map((b, i) => (
+            <div key={`${b.blockId}-${b.branchId || i}`} className="text-xs text-gray-700 flex items-center justify-between gap-2 py-1">
+              <span className="truncate">{b.branchName || '—'}</span>
+              <span className="text-gray-400 shrink-0 font-tabular">{b.devicesCount || 0} מכשירים</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Maps holiday types to badge colors
 const HOLIDAY_STYLES = {
   chag:           { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'חג' },
@@ -320,7 +413,7 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
 
           return (
             <>
-              {/* Section 1: existing WOs (draggable too — moving updates the WO date on save) */}
+              {/* Section 1: existing WOs grouped by city+region (one collapsible row per region) */}
               {existingBlocks.length > 0 && (
                 <div className="px-2 pt-2 pb-1">
                   <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">
@@ -328,21 +421,20 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
                     כבר משובץ ({existingBlocks.reduce((s, b) => s + b.branches.length, 0)})
                   </div>
                   <div className="space-y-2">
-                    {groupBlocksByCity(existingBlocks).map(group => (
-                      <div key={`existing-${group.city}`} className="space-y-2">
-                        {group.blocks.length > 1 && (
-                          <CityGroupHandle city={group.city} blocks={group.blocks} dayDate={day.date} />
-                        )}
-                        {group.blocks.map(block => (
-                          <BlockCard
-                            key={block.id}
-                            block={block}
-                            expanded={expandedBlockIds.has(block.id)}
-                            onToggle={() => onToggleBlock(block.id)}
-                          />
-                        ))}
-                      </div>
-                    ))}
+                    {groupBlocksByRegion(existingBlocks).map(rg => {
+                      const key = `existing-${rg.city}::${rg.region || ''}`;
+                      return (
+                        <RegionGroup
+                          key={key}
+                          city={rg.city}
+                          region={rg.region}
+                          blocks={rg.blocks}
+                          dayDate={day.date}
+                          expanded={expandedBlockIds.has(key)}
+                          onToggle={() => onToggleBlock(key)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -363,21 +455,20 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
                       הצעות חדשות ({newBlocks.reduce((s, b) => s + b.branches.length, 0)})
                     </div>
                     <div className="space-y-2">
-                      {groupBlocksByCity(newBlocks).map(group => (
-                        <div key={`new-${group.city}`} className="space-y-2">
-                          {group.blocks.length > 1 && (
-                            <CityGroupHandle city={group.city} blocks={group.blocks} dayDate={day.date} />
-                          )}
-                          {group.blocks.map(block => (
-                            <BlockCard
-                              key={block.id}
-                              block={block}
-                              expanded={expandedBlockIds.has(block.id)}
-                              onToggle={() => onToggleBlock(block.id)}
-                            />
-                          ))}
-                        </div>
-                      ))}
+                      {groupBlocksByRegion(newBlocks).map(rg => {
+                        const key = `new-${rg.city}::${rg.region || ''}`;
+                        return (
+                          <RegionGroup
+                            key={key}
+                            city={rg.city}
+                            region={rg.region}
+                            blocks={rg.blocks}
+                            dayDate={day.date}
+                            expanded={expandedBlockIds.has(key)}
+                            onToggle={() => onToggleBlock(key)}
+                          />
+                        );
+                      })}
                     </div>
                   </>
                 ) : (
@@ -474,6 +565,12 @@ export default function SchedulePage() {
         const cityBlocks = sourceDay.blocks.filter(b => b.city === data.city);
         setActiveCityGroup({ city: data.city, blocks: cityBlocks });
       }
+    } else if (data?.type === 'region-group') {
+      const sourceDay = days.find(d => d.date === data.sourceDayDate);
+      if (sourceDay) {
+        const regionBlocks = sourceDay.blocks.filter(b => b.city === data.city && (b.region || '') === (data.region || ''));
+        setActiveCityGroup({ city: data.city, region: data.region, blocks: regionBlocks });
+      }
     } else if (data) {
       setActiveBlock(data);
     }
@@ -506,6 +603,29 @@ export default function SchedulePage() {
         if (!sourceDay || !targetDay) return prev;
         const moving = sourceDay.blocks.filter(b => b.city === data.city);
         sourceDay.blocks = sourceDay.blocks.filter(b => b.city !== data.city);
+        targetDay.blocks.push(...moving);
+        targetDay.blocks.sort((a, b) => a.city.localeCompare(b.city, 'he'));
+        return next;
+      });
+      return;
+    }
+
+    // Region-group drag: move all blocks of the same city+region from source day → target day
+    if (data.type === 'region-group') {
+      if (data.sourceDayDate === targetDate) return;
+      const targetDay = days.find(d => d.date === targetDate);
+      if (targetDay?.holiday?.isWorkBlocked) {
+        if (!confirm(`היום הזה הוא ${targetDay.holiday.name}. בטוח להעביר לכאן?`)) return;
+      }
+      const region = data.region || '';
+      setDays(prev => {
+        const next = prev.map(d => ({ ...d, blocks: [...d.blocks] }));
+        const sourceDay = next.find(d => d.date === data.sourceDayDate);
+        const targetDay = next.find(d => d.date === targetDate);
+        if (!sourceDay || !targetDay) return prev;
+        const matches = b => b.city === data.city && (b.region || '') === region;
+        const moving = sourceDay.blocks.filter(matches);
+        sourceDay.blocks = sourceDay.blocks.filter(b => !matches(b));
         targetDay.blocks.push(...moving);
         targetDay.blocks.sort((a, b) => a.city.localeCompare(b.city, 'he'));
         return next;
