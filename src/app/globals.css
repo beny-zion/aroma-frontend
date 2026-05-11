@@ -161,6 +161,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Hide scrollbar but keep scroll behavior — used on horizontally-scrolled tab strips */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Tabular numerals for data — money, counts, dates */
 .font-tabular {
   font-variant-numeric: tabular-nums;

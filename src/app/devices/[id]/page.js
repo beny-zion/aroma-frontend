@@ -254,7 +254,7 @@ export default function DeviceDetailPage() {
       </div>
 
       <Tabs defaultValue="details" className="w-full" dir="rtl">
-        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1">
+        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1 overflow-x-auto flex-nowrap scrollbar-hide">
           <TabsTrigger value="details" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
             פרטים
           </TabsTrigger>
