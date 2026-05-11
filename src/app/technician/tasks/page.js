@@ -41,6 +41,15 @@ export default function TechnicianTasksPage() {
   const { invalidateWorkOrders, invalidateDevices, invalidateScents, invalidateServiceLogs } = useInvalidate();
   const [filter, setFilter] = useState('active');
   const [expandedTask, setExpandedTask] = useState(null);
+  // Region collapse state — keys "dateKey|city|region". Today's regions auto-expand.
+  const [collapsedRegions, setCollapsedRegions] = useState(new Set());
+  function toggleRegion(key) {
+    setCollapsedRegions(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
   const [completionNotes, setCompletionNotes] = useState('');
   const [activeFillKey, setActiveFillKey] = useState(null);
   const [fillForm, setFillForm] = useState({ scentId: '', mlFilled: '', notes: '', images: [] });
@@ -156,6 +165,11 @@ export default function TechnicianTasksPage() {
     if (!address) { toast.error('כתובת חסרה'); return; }
     window.open(`https://waze.com/ul?q=${encodeURIComponent(address)}&navigate=yes`, '_blank');
   }
+  function startOfToday() {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return t;
+  }
   function formatDate(date) {
     if (!date) return '';
     const d = new Date(date);
@@ -166,13 +180,51 @@ export default function TechnicianTasksPage() {
     return d.toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit' });
   }
   function groupByDate(tasks) {
-    const groups = {};
+    const groups = new Map();
     for (const task of tasks) {
-      const dateKey = new Date(task.scheduledDate).toDateString();
-      if (!groups[dateKey]) groups[dateKey] = { label: formatDate(task.scheduledDate), tasks: [] };
-      groups[dateKey].tasks.push(task);
+      const taskDate = new Date(task.scheduledDate);
+      taskDate.setHours(0, 0, 0, 0);
+      const dateKey = taskDate.toDateString();
+      if (!groups.has(dateKey)) {
+        groups.set(dateKey, {
+          label: formatDate(task.scheduledDate),
+          dateKey,
+          dateMs: taskDate.getTime(),
+          tasks: []
+        });
+      }
+      groups.get(dateKey).tasks.push(task);
     }
-    return Object.values(groups);
+    // Order: today first, then future ascending, then overdue descending (most recent past first)
+    const todayMs = startOfToday().getTime();
+    const arr = [...groups.values()];
+    arr.sort((a, b) => {
+      const aIsTodayOrFuture = a.dateMs >= todayMs;
+      const bIsTodayOrFuture = b.dateMs >= todayMs;
+      if (aIsTodayOrFuture && !bIsTodayOrFuture) return -1;
+      if (!aIsTodayOrFuture && bIsTodayOrFuture) return 1;
+      // both same side
+      return aIsTodayOrFuture ? a.dateMs - b.dateMs : b.dateMs - a.dateMs;
+    });
+    // Mark overdue groups so we can label them visually
+    return arr.map(g => ({ ...g, isOverdue: g.dateMs < todayMs }));
+  }
+
+  // Within a single day, group tasks by city+region for collapsible rows
+  function groupByRegion(tasks) {
+    const map = new Map();
+    for (const t of tasks) {
+      const city = t.branchId?.city || 'ללא עיר';
+      const region = t.branchId?.region || '';
+      const key = `${city}::${region}`;
+      if (!map.has(key)) map.set(key, { city, region, tasks: [] });
+      map.get(key).tasks.push(t);
+    }
+    // Sort regions alphabetically by city, then region
+    return [...map.values()].sort((a, b) => {
+      const c = a.city.localeCompare(b.city, 'he');
+      return c !== 0 ? c : a.region.localeCompare(b.region, 'he');
+    });
   }
 
   const grouped = groupByDate(tasks);
@@ -232,14 +284,55 @@ export default function TechnicianTasksPage() {
           <p className="text-sm">אין משימות להצגה</p>
         </div>
       ) : (
-        grouped.map((group, gIdx) => (
+        grouped.map((group, gIdx) => {
+          const regions = groupByRegion(group.tasks);
+          const isToday = group.label === 'היום';
+          return (
           <div key={gIdx} className="space-y-2">
-            <h3 className="text-xs font-bold text-muted-foreground px-1 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary"></span>
+            <h3 className={`text-xs font-bold px-1 flex items-center gap-2 ${
+              group.isOverdue ? 'text-red-700' : isToday ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                group.isOverdue ? 'bg-red-500' : isToday ? 'bg-primary' : 'bg-muted-foreground/40'
+              }`}></span>
               {group.label}
+              {group.isOverdue && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-red-100 text-red-700 ms-1">פיגור</span>}
+              <span className="text-muted-foreground/70 font-normal ms-auto font-tabular">
+                {group.tasks.length} סניפים · {regions.length} אזורים
+              </span>
             </h3>
 
-            {group.tasks.map((task) => {
+            {regions.map((region) => {
+              const regionKey = `${group.dateKey}|${region.city}|${region.region}`;
+              // Today's regions auto-expand; other days collapse by default
+              const isCollapsed = isToday ? collapsedRegions.has(regionKey) : !collapsedRegions.has(regionKey);
+              const totalDevices = region.tasks.reduce((s, t) => s + (t.devices?.length || 0), 0);
+              const doneDevices = region.tasks.reduce(
+                (s, t) => s + (t.devices?.filter(d => d.isCompleted).length || 0), 0
+              );
+              const allBranchesDone = region.tasks.every(t => t.status === 'completed');
+              return (
+                <div key={regionKey} className="bg-muted/30 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => toggleRegion(regionKey)}
+                    className="w-full px-3 py-2 flex items-center gap-2 text-right"
+                  >
+                    <MapPin className={`w-4 h-4 shrink-0 ${allBranchesDone ? 'text-green-600' : 'text-primary'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">
+                        {region.region ? `${region.city} · ${region.region}` : region.city}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground font-tabular">
+                        {region.tasks.length} סניפים · {doneDevices}/{totalDevices} מכשירים
+                      </div>
+                    </div>
+                    {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="px-2 pb-2 space-y-2">
+            {region.tasks.map((task) => {
               const isExpanded = expandedTask === task._id;
               return (
                 <div
@@ -455,8 +548,14 @@ export default function TechnicianTasksPage() {
                 </div>
               );
             })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        ))
+          );
+        })
       )}
 
       {/* Completion modal */}
