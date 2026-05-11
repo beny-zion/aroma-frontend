@@ -251,11 +251,10 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
 
   return (
     <div
-      className="flex flex-col rounded-2xl border"
+      className="flex flex-col rounded-2xl border md:min-h-[500px]"
       style={{
         backgroundColor: isBlocked ? '#FEF2F2' : '#F9FAFB',
         borderColor: isOver ? 'var(--color-primary)' : (isBlocked ? '#FCA5A5' : 'var(--color-border-light)'),
-        minHeight: '500px',
         boxShadow: isOver ? '0 0 0 2px var(--color-primary-100)' : 'none'
       }}
     >
@@ -309,8 +308,9 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
         )}
       </div>
 
-      {/* Body — split into two sections: existing (locked) on top, new suggestions on bottom */}
-      <div ref={setNodeRef} className="flex-1 flex flex-col overflow-y-auto" style={{ minHeight: '200px' }}>
+      {/* Body — split into two sections: existing (locked) on top, new suggestions on bottom.
+          Internal scroll only on desktop; on mobile the page itself scrolls naturally. */}
+      <div ref={setNodeRef} className="flex-1 flex flex-col md:overflow-y-auto md:min-h-[200px]">
         {(() => {
           const existingBlocks = day.blocks.filter(b => b.existingWorkOrderId);
           const newBlocks = day.blocks.filter(b => !b.existingWorkOrderId);

@@ -142,8 +142,8 @@ export default function Sidebar() {
           </div>
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="פתח תפריט">
-                <Menu className="h-5 w-5" />
+              <Button variant="ghost" size="icon" aria-label="פתח תפריט" className="!h-11 !w-11">
+                <Menu className="!h-7 !w-7" />
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-72 p-0 flex flex-col">
