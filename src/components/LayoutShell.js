@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import CommandPalette, { CommandPaletteTrigger } from './CommandPalette';
 import TechnicianBottomNav from './TechnicianBottomNav';
+import ReadySystemsCredit from './ReadySystemsCredit';
 import useChat from '@/hooks/useChat';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -135,7 +136,7 @@ export default function LayoutShell({ children }) {
       {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <div className="flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 mr-0 md:mr-60 pt-14 md:pt-0 pb-6 max-w-full overflow-x-hidden">
+        <main className="flex-1 mr-0 md:mr-60 pt-14 md:pt-0 pb-6 max-w-full overflow-x-hidden flex flex-col">
           {/* Top header bar */}
           <div className="hidden md:flex items-center justify-between gap-2 px-6 py-2 border-b bg-card/80 backdrop-blur sticky top-0 z-30">
             <CommandPaletteTrigger onClick={() => setPaletteOpen(true)} />
@@ -167,6 +168,11 @@ export default function LayoutShell({ children }) {
           <div className="p-3 md:p-5 lg:p-6">
             {children}
           </div>
+
+          {/* Page footer credit — visible at the end of every authenticated page */}
+          <footer className="mt-auto border-t bg-card/30">
+            <ReadySystemsCredit />
+          </footer>
         </main>
       </div>
       {/* Global command palette (Cmd/Ctrl+K) */}
