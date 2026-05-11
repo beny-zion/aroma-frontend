@@ -9,7 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import WorkOrdersTabs from '@/components/WorkOrdersTabs';
 import {
   DndContext,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDraggable,
@@ -412,7 +413,10 @@ export default function SchedulePage() {
   const [savedSummary, setSavedSummary] = useState(null); // { count } after save
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    // Desktop: drag starts after 5px movement (snappy)
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    // Mobile: hold 250ms before drag starts, so quick swipes scroll the page
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
   );
 
   if (!authLoading && user && !['admin', 'manager'].includes(user.role)) {
