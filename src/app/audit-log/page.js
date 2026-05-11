@@ -47,7 +47,7 @@ export default function AuditLogPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!authLoading && user && !['admin', 'manager'].includes(user.role)) {
+    if (!authLoading && user && !['admin', 'manager', 'secretary'].includes(user.role)) {
       router.replace('/');
     }
   }, [user, authLoading, router]);
@@ -189,7 +189,7 @@ const ACTION_META = {
   cancel:        { label: 'בוטל',         icon: XCircle,     color: 'text-red-700 bg-red-100' },
   delete:        { label: 'נמחק',         icon: Trash2,      color: 'text-red-700 bg-red-100' },
 };
-const ROLE_LABEL = { admin: 'אדמין', manager: 'מנהל', technician: 'טכנאי' };
+const ROLE_LABEL = { admin: 'אדמין', manager: 'מנהל', secretary: 'מזכירה', technician: 'טכנאי' };
 const ENTITY_HREF = {
   customer: id => `/customers/${id}`,
   branch:   id => `/branches/${id}`,

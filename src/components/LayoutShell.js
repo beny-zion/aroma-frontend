@@ -24,10 +24,14 @@ import useChat from '@/hooks/useChat';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 const roleLabels = {
-  admin: 'מנהל',
-  manager: 'מנהל משרד',
+  admin: 'אדמין',
+  manager: 'מנהל',
+  secretary: 'מזכירה',
   technician: 'טכנאי'
 };
+
+// Routes secretary cannot access (no profitability dashboard, no AI chat)
+const SECRETARY_BLOCKED_PATHS = ['/', '/admin'];
 
 export default function LayoutShell({ children }) {
   const { user, loading, logout } = useAuth();
@@ -50,6 +54,7 @@ export default function LayoutShell({ children }) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // AI chat: admin + manager only. Secretary doesn't get AI per permissions matrix.
   const showChat = user?.role === 'admin' || user?.role === 'manager';
 
   const isLoginPage = pathname === '/login';
@@ -57,21 +62,28 @@ export default function LayoutShell({ children }) {
   const isTechnicianRoute = pathname?.startsWith('/technician');
   const isPublicPage = isLoginPage || isAdminAnalytics;
   const isTechnician = user?.role === 'technician';
-  const shouldRedirectToHome = isLoginPage && !loading && user && !isTechnician;
+  const isSecretary = user?.role === 'secretary';
+  const shouldRedirectToHome = isLoginPage && !loading && user && !isTechnician && !isSecretary;
   const shouldRedirectTechToTasks = isLoginPage && !loading && isTechnician;
+  const shouldRedirectSecretary = isLoginPage && !loading && isSecretary;
   const shouldRedirectToLogin = !isPublicPage && !loading && !user;
   // Technicians cannot reach admin/manager routes
   const shouldBounceTechToTasks = !loading && isTechnician && !isTechnicianRoute && !isPublicPage;
+  // Secretary cannot reach the dashboard (profitability) — bounce to work-orders
+  const shouldBounceSecretary =
+    !loading && isSecretary && SECRETARY_BLOCKED_PATHS.includes(pathname);
 
   useEffect(() => {
     if (shouldRedirectTechToTasks || shouldBounceTechToTasks) {
       router.replace('/technician/tasks');
+    } else if (shouldRedirectSecretary || shouldBounceSecretary) {
+      router.replace('/work-orders');
     } else if (shouldRedirectToHome) {
       router.replace('/');
     } else if (shouldRedirectToLogin) {
       router.replace('/login');
     }
-  }, [shouldRedirectToHome, shouldRedirectTechToTasks, shouldBounceTechToTasks, shouldRedirectToLogin, router]);
+  }, [shouldRedirectToHome, shouldRedirectTechToTasks, shouldRedirectSecretary, shouldBounceSecretary, shouldBounceTechToTasks, shouldRedirectToLogin, router, pathname]);
 
   // Check for splash screen trigger
   useEffect(() => {

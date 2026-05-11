@@ -10,18 +10,21 @@ import { useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   UserCog, Plus, Search, Mail, Phone, Shield, ChevronLeft, ChevronRight,
-  Edit3, Pause, Play, X
+  Edit3, Pause, Play, X, Check, Minus
 } from 'lucide-react';
+import PermissionsMatrix from '@/components/PermissionsMatrix';
 
 const roleLabels = {
-  admin: 'מנהל',
-  manager: 'מנהל משרד',
+  admin: 'אדמין',
+  manager: 'מנהל',
+  secretary: 'מזכירה',
   technician: 'טכנאי'
 };
 
 const roleColors = {
   admin: 'bg-purple-100 text-purple-700',
   manager: 'bg-blue-100 text-blue-700',
+  secretary: 'bg-amber-100 text-amber-700',
   technician: 'bg-green-100 text-green-700'
 };
 
@@ -171,6 +174,9 @@ export default function UsersPage() {
           משתמש חדש
         </button>
       </div>
+
+      {/* Permissions matrix (collapsible, explains what each role can do) */}
+      <PermissionsMatrix />
 
       {/* Search & Filter */}
       <div className="card">

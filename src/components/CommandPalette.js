@@ -14,13 +14,13 @@ import {
 } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'דשבורד', icon: LayoutDashboard, keywords: ['dashboard', 'home'] },
+  { href: '/', label: 'דשבורד', icon: LayoutDashboard, keywords: ['dashboard', 'home'], roles: ['admin', 'manager'] },
   { href: '/customers', label: 'לקוחות', icon: Users, keywords: ['customers'] },
   { href: '/branches', label: 'סניפים', icon: Building2, keywords: ['branches'] },
   { href: '/devices', label: 'מכשירים', icon: Cpu, keywords: ['devices'] },
   { href: '/scents', label: 'ריחות', icon: Droplets, keywords: ['scents', 'inventory'] },
-  { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, keywords: ['work', 'orders'], roles: ['admin', 'manager'] },
-  { href: '/schedule', label: 'הזמנות עבודה — לוח שבועי', icon: CalendarDays, keywords: ['schedule', 'route', 'weekly'], roles: ['admin', 'manager'] },
+  { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, keywords: ['work', 'orders'], roles: ['admin', 'manager', 'secretary'] },
+  { href: '/schedule', label: 'הזמנות עבודה — לוח שבועי', icon: CalendarDays, keywords: ['schedule', 'route', 'weekly'], roles: ['admin', 'manager', 'secretary'] },
   { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, keywords: ['my', 'tasks'], roles: ['technician'] },
   { href: '/service-logs', label: 'יומן שירות', icon: FileText, keywords: ['service', 'logs'] },
   { href: '/refill', label: 'מילוי מהיר', icon: PlusCircle, keywords: ['refill', 'quick'] },

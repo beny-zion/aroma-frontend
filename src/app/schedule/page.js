@@ -419,7 +419,7 @@ export default function SchedulePage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
   );
 
-  if (!authLoading && user && !['admin', 'manager'].includes(user.role)) {
+  if (!authLoading && user && !['admin', 'manager', 'secretary'].includes(user.role)) {
     router.replace('/');
     return null;
   }
@@ -447,7 +447,7 @@ export default function SchedulePage() {
   // Auto-load schedule on first mount AND whenever the week changes,
   // so the manager always sees the right week's calendar without clicking.
   useEffect(() => {
-    if (user && ['admin', 'manager'].includes(user.role)) {
+    if (user && ['admin', 'manager', 'secretary'].includes(user.role)) {
       handleSuggest();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

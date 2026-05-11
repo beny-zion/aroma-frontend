@@ -195,6 +195,11 @@ export const auditAPI = {
   },
 };
 
+// ========== Permissions matrix ==========
+export const permissionsAPI = {
+  get: () => fetchAPI('/permissions'),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {

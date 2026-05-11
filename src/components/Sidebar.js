@@ -14,8 +14,9 @@ import {
 import { cn } from '@/lib/utils';
 
 const roleLabels = {
-  admin: 'מנהל',
-  manager: 'מנהל משרד',
+  admin: 'אדמין',
+  manager: 'מנהל',
+  secretary: 'מזכירה',
   technician: 'טכנאי'
 };
 
@@ -23,7 +24,8 @@ const menuSections = [
   {
     title: 'ראשי',
     items: [
-      { href: '/', label: 'דשבורד', icon: LayoutDashboard },
+      // Dashboard hidden from secretary (no profitability view) and technician (mobile UI elsewhere)
+      { href: '/', label: 'דשבורד', icon: LayoutDashboard, roles: ['admin', 'manager'] },
       { href: '/devices', label: 'מכשירים', icon: Cpu },
       { href: '/customers', label: 'לקוחות', icon: Users },
       { href: '/branches', label: 'סניפים', icon: Building2 },
@@ -35,7 +37,7 @@ const menuSections = [
     items: [
       { href: '/refill', label: 'מילוי מהיר', icon: PlusCircle, accent: true },
       { href: '/service-logs', label: 'יומן שירות', icon: FileText },
-      { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager'] },
+      { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager', 'secretary'] },
       { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
     ]
   },
@@ -43,8 +45,8 @@ const menuSections = [
     title: 'מערכת',
     items: [
       { href: '/users', label: 'משתמשים', icon: UserCog, roles: ['admin'] },
-      { href: '/audit-log', label: 'יומן פעילות', icon: History, roles: ['admin', 'manager'] },
-      { href: '/device-types', label: 'סוגי מכשירים', icon: Settings },
+      { href: '/audit-log', label: 'יומן פעילות', icon: History, roles: ['admin', 'manager', 'secretary'] },
+      { href: '/device-types', label: 'סוגי מכשירים', icon: Settings, roles: ['admin', 'manager', 'secretary'] },
     ]
   }
 ];

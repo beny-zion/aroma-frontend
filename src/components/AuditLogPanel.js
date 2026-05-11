@@ -14,7 +14,7 @@ const ACTION_META = {
   delete:        { label: 'נמחק',         icon: Trash2,      color: 'text-red-700 bg-red-100' },
 };
 
-const ROLE_LABEL = { admin: 'אדמין', manager: 'מנהל', technician: 'טכנאי' };
+const ROLE_LABEL = { admin: 'אדמין', manager: 'מנהל', secretary: 'מזכירה', technician: 'טכנאי' };
 
 const FIELD_LABELS = {
   // Customer
