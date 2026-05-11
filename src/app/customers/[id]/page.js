@@ -8,6 +8,7 @@ import { customersAPI, branchesAPI } from '@/lib/api';
 import { useInvalidate } from '@/hooks/useData';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import VisitsPanel from '@/components/VisitsPanel';
+import AuditLogPanel from '@/components/AuditLogPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -279,12 +280,10 @@ export default function CustomerDetailPage() {
             תשלומים
           </TabsTrigger>
           <TabsTrigger
-            value="docs"
-            disabled
-            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm opacity-50"
+            value="audit"
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm"
           >
-            תיעוד
-            <span className="text-[10px] font-medium px-1 py-0 rounded bg-[var(--brand-50)] text-[var(--brand-hover)] ms-1">בקרוב</span>
+            תיעוד שינויים
           </TabsTrigger>
         </TabsList>
 
@@ -437,6 +436,11 @@ export default function CustomerDetailPage() {
         {/* TAB: תשלומים */}
         <TabsContent value="payments" className="mt-4">
           <PaymentsPanel customer={customer} />
+        </TabsContent>
+
+        {/* TAB: תיעוד שינויים */}
+        <TabsContent value="audit" className="mt-4">
+          <AuditLogPanel entityType="customer" entityId={customer._id} />
         </TabsContent>
       </Tabs>
 

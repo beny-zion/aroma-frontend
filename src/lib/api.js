@@ -186,6 +186,15 @@ export const scheduleAPI = {
   save: (data) => fetchAPI('/schedule/save', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// ========== Audit Log ==========
+export const auditAPI = {
+  list: (params = {}) => {
+    const cleaned = Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null && v !== ''));
+    const query = new URLSearchParams(cleaned).toString();
+    return fetchAPI(`/audit${query ? `?${query}` : ''}`);
+  },
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {

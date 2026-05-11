@@ -10,6 +10,7 @@ import Breadcrumb from '@/components/shared/Breadcrumb';
 import StatusBadge from '@/components/StatusBadge';
 import RefillProgressBar from '@/components/RefillProgressBar';
 import VisitsPanel from '@/components/VisitsPanel';
+import AuditLogPanel from '@/components/AuditLogPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -266,6 +267,9 @@ export default function DeviceDetailPage() {
           <TabsTrigger value="visits" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
             הזמנות עבודה
           </TabsTrigger>
+          <TabsTrigger value="audit" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            תיעוד שינויים
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB: פרטים */}
@@ -472,6 +476,10 @@ export default function DeviceDetailPage() {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="audit" className="mt-4">
+          <AuditLogPanel entityType="device" entityId={device._id} />
         </TabsContent>
       </Tabs>
 
