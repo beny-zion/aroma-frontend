@@ -3,6 +3,7 @@
 import useSWR from 'swr';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, User as UserIcon, ClipboardList, Droplets, CheckCircle } from 'lucide-react';
+import ReadySystemsCredit from '@/components/ReadySystemsCredit';
 
 export default function TechnicianProfilePage() {
   const { user, logout } = useAuth();
@@ -81,6 +82,10 @@ export default function TechnicianProfilePage() {
         <LogOut className="w-4 h-4" />
         יציאה מהמערכת
       </button>
+
+      <div className="pt-2">
+        <ReadySystemsCredit />
+      </div>
     </div>
   );
 }

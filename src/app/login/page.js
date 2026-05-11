@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Lock, Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import ReadySystemsCredit from '@/components/ReadySystemsCredit';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -210,6 +211,10 @@ export default function LoginPage() {
         <p className="text-center text-xs text-[var(--color-text-muted)] mt-8">
           ארומה פלוס &copy; {new Date().getFullYear()} | מערכת ניהול מקצועית
         </p>
+
+        <div className="mt-6 -mx-4 sm:-mx-6 -mb-6 rounded-b-2xl overflow-hidden">
+          <ReadySystemsCredit variant="dark" />
+        </div>
       </div>
     </div>
   );

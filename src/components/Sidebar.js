@@ -12,6 +12,7 @@ import {
   LogOut, Menu, CalendarDays, History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ReadySystemsCredit from './ReadySystemsCredit';
 
 const roleLabels = {
   admin: 'אדמין',
@@ -118,6 +119,9 @@ function UserFooter({ user, onLogout }) {
         <LogOut className="h-4 w-4" />
         יציאה מהמערכת
       </Button>
+      <div className="mt-2 -mx-3 -mb-3 border-t border-border/40">
+        <ReadySystemsCredit />
+      </div>
     </div>
   );
 }
