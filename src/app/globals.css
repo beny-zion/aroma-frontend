@@ -139,13 +139,20 @@
 }
 
 html {
-  font-size: 14px;
+  font-size: 15px;
+}
+
+/* Slightly larger on mobile — more comfortable for thumb-distance reading */
+@media (max-width: 768px) {
+  html {
+    font-size: 16px;
+  }
 }
 
 body {
   direction: rtl;
   font-family: 'Rubik', system-ui, sans-serif;
-  font-size: 14px;
+  /* Inherits the responsive font-size from html */
   line-height: 1.55;
   letter-spacing: -0.005em;
   background-color: var(--surface-base);
