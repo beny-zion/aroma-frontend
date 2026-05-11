@@ -212,9 +212,7 @@ export default function LoginPage() {
           ארומה פלוס &copy; {new Date().getFullYear()} | מערכת ניהול מקצועית
         </p>
 
-        <div className="mt-6 -mx-4 sm:-mx-6 -mb-6 rounded-b-2xl overflow-hidden">
-          <ReadySystemsCredit variant="dark" />
-        </div>
+        <ReadySystemsCredit />
       </div>
     </div>
   );
