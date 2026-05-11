@@ -1,14 +1,31 @@
 'use client';
 
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import useSWR from 'swr';
+import useSWR, { mutate } from 'swr';
+import { toast } from 'sonner';
+import { devicesAPI } from '@/lib/api';
+import { useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import StatusBadge from '@/components/StatusBadge';
 import RefillProgressBar from '@/components/RefillProgressBar';
 import VisitsPanel from '@/components/VisitsPanel';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import {
   Droplets, MapPin, Calendar, Wrench, PlusCircle, MinusCircle,
-  RefreshCw, ArrowRight, Loader2, Clock, User, FileText
+  RefreshCw, ArrowRight, Loader2, Clock, User, FileText,
+  Edit3, MoreVertical, Pause, Play
 } from 'lucide-react';
 
 function formatDate(dateStr) {
@@ -63,13 +80,79 @@ const serviceTypeConfig = {
 export default function DeviceDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const swrKey = id ? `/devices/${id}` : null;
 
-  const { data: device, error: deviceError, isLoading: deviceLoading } = useSWR(id ? `/devices/${id}` : null);
+  const { data: device, error: deviceError, isLoading: deviceLoading } = useSWR(swrKey);
   const { data: logsData, error: logsError, isLoading: logsLoading } = useSWR(id ? `/service-logs/device/${id}/history` : null);
+  const { scents } = useScents();
+  const { deviceTypes } = useActiveDeviceTypes();
+  const { invalidateDevices } = useInvalidate();
 
   const serviceLogs = Array.isArray(logsData) ? logsData : [];
   const isLoading = deviceLoading || logsLoading;
   const error = deviceError || logsError;
+
+  // Edit dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  function openEdit() {
+    setEditForm({
+      deviceType: device.deviceType || '',
+      scentId: device.scentId?._id || device.scentId || '',
+      locationInBranch: device.locationInBranch || '',
+      mlPerRefill: device.mlPerRefill || 100,
+      refillIntervalDays: device.refillIntervalDays || 30
+    });
+    setEditOpen(true);
+  }
+
+  function handleDeviceTypeChange(typeName) {
+    const dt = deviceTypes?.find(t => t.name === typeName);
+    setEditForm(prev => ({
+      ...prev,
+      deviceType: typeName,
+      mlPerRefill: dt?.mlPerRefill || prev.mlPerRefill,
+      refillIntervalDays: dt?.defaultRefillInterval || prev.refillIntervalDays
+    }));
+  }
+
+  async function handleSave() {
+    if (!editForm.deviceType) {
+      toast.error('יש לבחור סוג מכשיר');
+      return;
+    }
+    try {
+      setSaving(true);
+      await devicesAPI.update(device._id, {
+        deviceType: editForm.deviceType,
+        scentId: editForm.scentId || null,
+        locationInBranch: editForm.locationInBranch,
+        mlPerRefill: parseInt(editForm.mlPerRefill) || 100,
+        refillIntervalDays: parseInt(editForm.refillIntervalDays) || 30
+      });
+      await mutate(swrKey);
+      invalidateDevices();
+      toast.success('פרטי המכשיר עודכנו');
+      setEditOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'שגיאה בעדכון מכשיר');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleActive() {
+    try {
+      await devicesAPI.update(device._id, { isActive: !device.isActive });
+      await mutate(swrKey);
+      invalidateDevices();
+      toast.success(device.isActive ? 'המכשיר הוקפא' : 'המכשיר הופעל');
+    } catch (err) {
+      toast.error(err.message || 'שגיאה בעדכון סטטוס');
+    }
+  }
 
   if (isLoading) {
     return (
@@ -108,32 +191,61 @@ export default function DeviceDetailPage() {
   ];
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+    <div className="space-y-4">
       <Breadcrumb items={breadcrumbItems} />
 
-      {/* כותרת + חזרה */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(`/branches/${branchId}`)}
-            className="action-btn action-btn-secondary"
+            className="h-8 w-8 rounded-md flex items-center justify-center text-[var(--text-soft)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)] transition-colors"
+            aria-label="חזרה"
           >
             <ArrowRight className="w-4 h-4" />
           </button>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            <h1 className="text-lg md:text-xl font-bold tracking-tight text-[var(--text-strong)]">
               {deviceLabel}
             </h1>
-            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-              {branchName} | {customerName}
+            <p className="text-[12.5px] text-[var(--text-soft)] mt-0.5">
+              {branchName} · {customerName}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={device.refillStatus} />
           {device.isActive === false && (
-            <span className="status-badge bg-gray-100 text-gray-600">לא פעיל</span>
+            <span className="status-badge bg-[var(--surface-muted)] text-[var(--text-soft)]">מוקפא</span>
           )}
+          <Button onClick={openEdit} variant="outline" size="sm">
+            <Edit3 className="w-4 h-4" />
+            ערוך
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="h-9 w-9 rounded-md border flex items-center justify-center text-[var(--text-soft)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
+                aria-label="פעולות"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuItem onClick={toggleActive}>
+                {device.isActive ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    הקפא מכשיר
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    הפעל מכשיר
+                  </>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -326,6 +438,86 @@ export default function DeviceDetailPage() {
           </div>
         )}
       </div>
+      {/* Edit device dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>עריכת מכשיר</DialogTitle>
+            <DialogDescription>עדכון סוג, ריח, מיקום ומחזור מילוי.</DialogDescription>
+          </DialogHeader>
+          {editForm && (
+            <div className="grid gap-3 py-1">
+              <div className="grid gap-1.5">
+                <Label htmlFor="dev-type">סוג מכשיר *</Label>
+                <Select value={editForm.deviceType} onValueChange={handleDeviceTypeChange}>
+                  <SelectTrigger id="dev-type"><SelectValue placeholder="בחר סוג מכשיר" /></SelectTrigger>
+                  <SelectContent>
+                    {deviceTypes?.map(t => (
+                      <SelectItem key={t._id} value={t.name}>
+                        {t.name}{t.mlPerRefill ? ` · ${t.mlPerRefill} מ"ל` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="dev-scent">ריח</Label>
+                  <Select
+                    value={editForm.scentId || 'none'}
+                    onValueChange={(v) => setEditForm({ ...editForm, scentId: v === 'none' ? '' : v })}
+                  >
+                    <SelectTrigger id="dev-scent"><SelectValue placeholder="בחר ריח" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">ללא ריח</SelectItem>
+                      {scents?.map(s => (
+                        <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="dev-location">מיקום בסניף</Label>
+                  <Input
+                    id="dev-location"
+                    value={editForm.locationInBranch}
+                    onChange={(e) => setEditForm({ ...editForm, locationInBranch: e.target.value })}
+                    placeholder="כניסה / קופה / מסדרון"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="dev-ml">כמות מילוי (מ"ל)</Label>
+                  <Input
+                    id="dev-ml"
+                    type="number"
+                    min="1"
+                    value={editForm.mlPerRefill}
+                    onChange={(e) => setEditForm({ ...editForm, mlPerRefill: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="dev-interval">מחזור מילוי (ימים)</Label>
+                  <Input
+                    id="dev-interval"
+                    type="number"
+                    min="1"
+                    value={editForm.refillIntervalDays}
+                    onChange={(e) => setEditForm({ ...editForm, refillIntervalDays: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={saving}>ביטול</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'שומר...' : 'שמור שינויים'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

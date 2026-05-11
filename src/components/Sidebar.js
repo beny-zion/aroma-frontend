@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   LayoutDashboard, Cpu, Users, Building2, Droplets,
   PlusCircle, FileText, ClipboardList, UserCog, Settings,
-  LogOut, Menu, X, CalendarDays
+  LogOut, Menu, CalendarDays
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const roleLabels = {
   admin: 'מנהל',
@@ -16,198 +19,157 @@ const roleLabels = {
   technician: 'טכנאי'
 };
 
+const menuSections = [
+  {
+    title: 'ראשי',
+    items: [
+      { href: '/', label: 'דשבורד', icon: LayoutDashboard },
+      { href: '/devices', label: 'מכשירים', icon: Cpu },
+      { href: '/customers', label: 'לקוחות', icon: Users },
+      { href: '/branches', label: 'סניפים', icon: Building2 },
+      { href: '/scents', label: 'ריחות', icon: Droplets },
+    ]
+  },
+  {
+    title: 'תפעול',
+    items: [
+      { href: '/refill', label: 'מילוי מהיר', icon: PlusCircle, accent: true },
+      { href: '/service-logs', label: 'יומן שירות', icon: FileText },
+      { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager'] },
+      { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
+    ]
+  },
+  {
+    title: 'מערכת',
+    items: [
+      { href: '/users', label: 'משתמשים', icon: UserCog, roles: ['admin'] },
+      { href: '/device-types', label: 'סוגי מכשירים', icon: Settings },
+    ]
+  }
+];
+
+function NavList({ user, pathname, onNavigate }) {
+  const visibleSections = menuSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => !item.roles || item.roles.includes(user?.role))
+    }))
+    .filter(section => section.items.length > 0);
+
+  return (
+    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      {visibleSections.map((section, sIdx) => (
+        <div key={sIdx}>
+          <div className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            {section.title}
+          </div>
+          <ul className="space-y-0.5">
+            {section.items.map(item => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground font-medium'
+                        : item.accent
+                        ? 'text-primary hover:bg-accent'
+                        : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'opacity-100' : 'opacity-70')} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function UserFooter({ user, onLogout }) {
+  return (
+    <div className="border-t p-3">
+      <div className="flex items-center gap-2 px-2 py-2">
+        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+          {user?.name?.charAt(0)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+          <p className="text-[11px] text-muted-foreground">{roleLabels[user?.role] || user?.role}</p>
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onLogout}
+        className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 mt-1"
+      >
+        <LogOut className="h-4 w-4" />
+        יציאה מהמערכת
+      </Button>
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
-
-  const menuSections = [
-    {
-      items: [
-        { href: '/', label: 'דשבורד', icon: LayoutDashboard },
-        { href: '/devices', label: 'מכשירים', icon: Cpu },
-        { href: '/customers', label: 'לקוחות', icon: Users },
-        { href: '/branches', label: 'סניפים', icon: Building2 },
-        { href: '/scents', label: 'ריחות', icon: Droplets },
-      ]
-    },
-    {
-      items: [
-        { href: '/refill', label: 'ביצוע מילוי', icon: PlusCircle, highlight: true },
-        { href: '/service-logs', label: 'יומן שירות', icon: FileText },
-        { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager'] },
-        { href: '/schedule', label: 'מסלול שבועי', icon: CalendarDays, roles: ['admin', 'manager'] },
-        { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
-      ]
-    },
-    {
-      items: [
-        { href: '/users', label: 'משתמשים', icon: UserCog, roles: ['admin'] },
-        { href: '/device-types', label: 'סוגי מכשירים', icon: Settings },
-      ]
-    }
-  ];
-
-  // Filter items by role
-  const getVisibleItems = (items) => {
-    return items.filter(item => {
-      if (!item.roles) return true;
-      return item.roles.includes(user?.role);
-    });
-  };
 
   const handleLogout = async () => {
     await logout();
   };
 
-  const renderMenuItem = (item, isMobile = false) => {
-    const isActive = pathname === item.href;
-    const Icon = item.icon;
-
-    return (
-      <li key={item.href}>
-        <Link
-          href={item.href}
-          onClick={isMobile ? () => setIsMobileMenuOpen(false) : undefined}
-          className={`flex items-center gap-3 ${isMobile ? 'p-4 min-h-[56px]' : 'p-3'} rounded-xl transition-all ${
-            isActive
-              ? 'bg-[var(--color-primary)] text-white shadow-md'
-              : item.highlight
-                ? 'bg-[var(--color-primary-50)] text-[var(--color-primary-dark)] border border-[var(--color-primary-200)] hover:bg-[var(--color-primary-100)]'
-                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text-primary)]'
-          }`}
-        >
-          <Icon className={`w-5 h-5 ${isActive ? 'opacity-100' : 'opacity-70'}`} />
-          <span className="font-medium">{item.label}</span>
-          {isActive && !isMobile && (
-            <span className="mr-auto w-2 h-2 bg-white rounded-full opacity-80"></span>
-          )}
-        </Link>
-      </li>
-    );
-  };
-
   return (
     <>
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 right-0 left-0 z-50 bg-white border-b border-[var(--color-border-light)]">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <img src="/LogoIcon.svg" alt="ארומה פלוס" className="w-10 h-10 rounded-xl object-contain" />
-            <span className="text-xl font-bold text-[var(--color-primary)]">ארומה פלוס</span>
+      {/* Mobile top bar with hamburger */}
+      <div className="md:hidden fixed top-0 right-0 left-0 z-50 bg-background border-b">
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <img src="/LogoIcon.svg" alt="ארומה פלוס" className="h-9 w-9 rounded-lg object-contain" />
+            <span className="text-base font-bold text-primary">ארומה פלוס</span>
           </div>
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="btn-icon"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="פתח תפריט">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72 p-0 flex flex-col">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle className="flex items-center gap-2 text-right">
+                  <img src="/LogoIcon.svg" alt="" className="h-9 w-9 rounded-lg object-contain" />
+                  <span className="text-base font-bold text-primary">ארומה פלוס</span>
+                </SheetTitle>
+              </SheetHeader>
+              <NavList user={user} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+              {user && <UserFooter user={user} onLogout={handleLogout} />}
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Menu */}
-      <div className={`md:hidden fixed top-[73px] right-0 left-0 bottom-0 bg-white z-40 transform transition-transform duration-300 flex flex-col ${
-        isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}>
-        <nav className="p-4 flex-1 overflow-y-auto">
-          {menuSections.map((section, sIdx) => {
-            const visibleItems = getVisibleItems(section.items);
-            if (visibleItems.length === 0) return null;
-            return (
-              <div key={sIdx}>
-                {sIdx > 0 && <hr className="my-3 border-[var(--color-border-light)]" />}
-                <ul className="space-y-2">
-                  {visibleItems.map((item) => renderMenuItem(item, true))}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Mobile footer */}
-        {user && (
-          <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-bg)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">{user.name}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">{roleLabels[user.role] || user.role}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                יציאה
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white shadow-lg h-screen fixed right-0 top-0 z-40 border-l border-[var(--color-border-light)]">
-        {/* Logo */}
-        <div className="p-6 border-b border-[var(--color-border-light)]">
-          <div className="flex items-center gap-3">
-            <img src="/LogoIcon.svg" alt="ארומה פלוס" className="w-12 h-12 rounded-xl object-contain shadow-md" />
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-60 bg-card h-screen fixed right-0 top-0 z-40 border-l">
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2.5">
+            <img src="/LogoIcon.svg" alt="ארומה פלוס" className="h-9 w-9 rounded-lg object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-[var(--color-primary)]">ארומה פלוס</h1>
-              <p className="text-xs text-[var(--color-text-muted)]">מערכת ניהול</p>
+              <h1 className="text-base font-bold text-primary leading-tight">ארומה פלוס</h1>
+              <p className="text-[11px] text-muted-foreground leading-tight">מערכת ניהול</p>
             </div>
           </div>
         </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          {menuSections.map((section, sIdx) => {
-            const visibleItems = getVisibleItems(section.items);
-            if (visibleItems.length === 0) return null;
-            return (
-              <div key={sIdx}>
-                {sIdx > 0 && <hr className="my-3 border-[var(--color-border-light)]" />}
-                <ul className="space-y-1">
-                  {visibleItems.map((item) => renderMenuItem(item, false))}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* Footer with user info */}
-        {user && (
-          <div className="p-4 border-t border-[var(--color-border-light)] bg-[var(--color-bg)]">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-[var(--color-primary-100)] flex items-center justify-center">
-                <span className="text-sm font-bold text-[var(--color-primary-dark)]">
-                  {user.name?.charAt(0)}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{user.name}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">{roleLabels[user.role] || user.role}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              יציאה מהמערכת
-            </button>
-          </div>
-        )}
+        <NavList user={user} pathname={pathname} />
+        {user && <UserFooter user={user} onLogout={handleLogout} />}
       </aside>
     </>
   );

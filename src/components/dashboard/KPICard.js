@@ -1,19 +1,24 @@
 'use client';
 
 import {
-  DollarSign,
-  Cpu,
-  MapPin,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown
+  DollarSign, Cpu, MapPin, AlertTriangle, TrendingUp, TrendingDown
 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 const iconMap = {
   money: DollarSign,
   devices: Cpu,
   branches: MapPin,
   alerts: AlertTriangle
+};
+
+// Each color → soft tinted icon background + label color
+const colorMap = {
+  primary: { bg: 'bg-[var(--brand-50)]',     fg: 'text-[var(--brand-hover)]'  },
+  green:   { bg: 'bg-[var(--status-green-bg)]', fg: 'text-[var(--status-green-text)]' },
+  blue:    { bg: 'bg-[var(--status-blue-bg)]',  fg: 'text-[var(--status-blue-text)]'  },
+  amber:   { bg: 'bg-[var(--status-amber-bg)]', fg: 'text-[var(--status-amber-text)]' },
+  red:     { bg: 'bg-[var(--status-red-bg)]',   fg: 'text-[var(--status-red-text)]'   }
 };
 
 export default function KPICard({
@@ -27,116 +32,51 @@ export default function KPICard({
   suffix = ''
 }) {
   const Icon = iconMap[icon] || Cpu;
+  const c = colorMap[color] || colorMap.primary;
 
-  const colorStyles = {
-    primary: {
-      background: 'linear-gradient(to bottom right, var(--color-primary-50), var(--color-primary-100))',
-      borderColor: 'var(--color-primary-200)',
-      iconBg: 'var(--color-primary)',
-      valueColor: 'var(--color-primary-dark)'
-    },
-    green: {
-      background: 'linear-gradient(to bottom right, #ecfdf5, #d1fae5)',
-      borderColor: '#a7f3d0',
-      iconBg: '#10b981',
-      valueColor: '#047857'
-    },
-    blue: {
-      background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)',
-      borderColor: '#bfdbfe',
-      iconBg: '#3b82f6',
-      valueColor: '#1d4ed8'
-    },
-    amber: {
-      background: 'linear-gradient(to bottom right, #fffbeb, #fef3c7)',
-      borderColor: '#fde68a',
-      iconBg: '#f59e0b',
-      valueColor: '#b45309'
-    },
-    red: {
-      background: 'linear-gradient(to bottom right, #fef2f2, #fee2e2)',
-      borderColor: '#fecaca',
-      iconBg: '#ef4444',
-      valueColor: '#b91c1c'
-    }
-  };
-
-  const styles = colorStyles[color] || colorStyles.primary;
-
-  const formatValue = (val) => {
-    if (typeof val === 'number') {
-      return val.toLocaleString('he-IL');
-    }
-    return val;
-  };
+  const formatValue = (val) =>
+    typeof val === 'number' ? val.toLocaleString('he-IL') : val;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow"
-      style={{
-        background: styles.background,
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: styles.borderColor
-      }}
-    >
-      {/* Background decoration */}
-      <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-white/20 blur-2xl" />
-
-      <div className="relative flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <div className="flex items-baseline gap-1">
+    <Card className="p-4 hover:border-[var(--border-strong)] transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-medium text-[var(--text-soft)] mb-2">{title}</p>
+          <div className="flex items-baseline gap-1 font-tabular">
             {prefix && (
-              <span
-                className="text-xl font-bold"
-                style={{ color: styles.valueColor }}
-              >
-                {prefix}
-              </span>
+              <span className="text-base font-semibold text-[var(--text-soft)]">{prefix}</span>
             )}
-            <p
-              className="text-3xl font-bold"
-              style={{ color: styles.valueColor }}
-            >
+            <span className="text-[26px] font-bold text-[var(--text-strong)] leading-none tracking-tight">
               {formatValue(value)}
-            </p>
+            </span>
             {suffix && (
-              <span
-                className="text-lg font-medium"
-                style={{ color: styles.valueColor }}
-              >
-                {suffix}
-              </span>
+              <span className="text-sm font-medium text-[var(--text-soft)]">{suffix}</span>
             )}
           </div>
 
           {(subtitle || trend !== undefined) && (
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2.5">
               {trend !== undefined && (
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
                   trend > 0
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-[var(--status-green-bg)] text-[var(--status-green-text)]'
                     : trend < 0
-                    ? 'bg-red-100 text-red-700'
-                    : 'bg-gray-100 text-gray-600'
+                    ? 'bg-[var(--status-red-bg)] text-[var(--status-red-text)]'
+                    : 'bg-[var(--surface-muted)] text-[var(--text-soft)]'
                 }`}>
                   {trend > 0 ? <TrendingUp className="w-3 h-3" /> : trend < 0 ? <TrendingDown className="w-3 h-3" /> : null}
                   {trend > 0 ? '+' : ''}{trend}%
                 </span>
               )}
-              {subtitle && <span className="text-sm text-gray-500">{subtitle}</span>}
+              {subtitle && <span className="text-[12px] text-[var(--text-soft)]">{subtitle}</span>}
             </div>
           )}
         </div>
 
-        <div
-          className="p-3 rounded-xl shadow-lg"
-          style={{ backgroundColor: styles.iconBg }}
-        >
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${c.bg}`}>
+          <Icon className={`w-4.5 h-4.5 ${c.fg}`} strokeWidth={2} />
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

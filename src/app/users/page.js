@@ -1,5 +1,7 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
@@ -116,7 +118,7 @@ export default function UsersPage() {
       setShowModal(false);
       invalidateUsers();
     } catch (err) {
-      alert(err.message || 'שגיאה בשמירת משתמש');
+      toast.error(err.message || 'שגיאה בשמירת משתמש');
     } finally {
       setSaving(false);
     }
@@ -132,7 +134,7 @@ export default function UsersPage() {
       }
       invalidateUsers();
     } catch (err) {
-      alert(err.message || 'שגיאה בעדכון');
+      toast.error(err.message || 'שגיאה בעדכון');
     }
   }
 

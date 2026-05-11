@@ -116,7 +116,7 @@ export default function VisitsPanel({ branchId, customerId, deviceId, title = '×
             {upcoming.slice(0, 3).map(wo => (
               <Link
                 key={wo._id}
-                href={`/work-orders?branchId=${wo.branchId?._id || wo.branchId}`}
+                href={`/work-orders?id=${wo._id}`}
                 className="block p-3 border rounded-xl hover:bg-gray-50 transition-colors"
                 style={{ borderColor: 'var(--color-border-light)' }}
               >

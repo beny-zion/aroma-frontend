@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { workOrdersAPI, serviceLogsAPI } from '@/lib/api';
 import { useInvalidate, useScents } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,8 +76,9 @@ export default function MyTasksPage() {
     try {
       await workOrdersAPI.updateStatus(taskId, 'in_progress');
       invalidateWorkOrders();
+      toast.success('המשימה התחילה');
     } catch (err) {
-      alert(err.message || 'שגיאה בעדכון סטטוס');
+      toast.error(err.message || 'שגיאה בעדכון סטטוס');
     }
   }
 
@@ -106,7 +108,7 @@ export default function MyTasksPage() {
       const urls = await Promise.all(files.map(uploadImage));
       setFillForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
     } catch (err) {
-      alert(err.message || 'שגיאה בהעלאת תמונה');
+      toast.error(err.message || 'שגיאה בהעלאת תמונה');
     } finally {
       setUploadingImage(false);
     }
@@ -124,7 +126,7 @@ export default function MyTasksPage() {
     const deviceId = taskDevice.deviceId?._id || taskDevice.deviceId;
 
     if (!deviceId || !fillForm.mlFilled) {
-      alert('יש להזין כמות מילוי');
+      toast.error('יש להזין כמות מילוי');
       return;
     }
 
@@ -159,8 +161,9 @@ export default function MyTasksPage() {
       invalidateDevices();
       invalidateScents();
       invalidateServiceLogs();
+      toast.success('המילוי נרשם');
     } catch (err) {
-      alert(err.message || 'שגיאה ברישום מילוי');
+      toast.error(err.message || 'שגיאה ברישום מילוי');
     } finally {
       setSavingFill(false);
     }
@@ -189,10 +192,12 @@ export default function MyTasksPage() {
       setCompletionModal(null);
       invalidateWorkOrders();
       if (result.followupOrderId) {
-        alert(result.message || 'נוצרה הזמנת המשך');
+        toast.success(result.message || 'נוצרה הזמנת המשך');
+      } else {
+        toast.success('המשימה הושלמה');
       }
     } catch (err) {
-      alert(err.message || 'שגיאה בעדכון סטטוס');
+      toast.error(err.message || 'שגיאה בעדכון סטטוס');
     } finally {
       setCompletionSaving(false);
     }
@@ -207,7 +212,7 @@ export default function MyTasksPage() {
   function openNavigation(branch) {
     const address = buildAddressString(branch);
     if (!address) {
-      alert('כתובת חסרה לסניף');
+      toast.error('כתובת חסרה לסניף');
       return;
     }
     const query = encodeURIComponent(address);

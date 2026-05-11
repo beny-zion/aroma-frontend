@@ -1,14 +1,30 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
+import { toast } from 'sonner';
 import { workOrdersAPI } from '@/lib/api';
 import { useBranches, useTechnicians, useAllDevices, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import WorkOrdersTabs from '@/components/WorkOrdersTabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import {
   ClipboardList, Plus, Filter, Calendar, User, MapPin,
-  ChevronLeft, ChevronRight, Zap, Clock, AlertTriangle, CheckCircle, XCircle, X
+  ChevronLeft, ChevronRight, Zap, Clock, AlertTriangle, CheckCircle, XCircle, X, Edit3
 } from 'lucide-react';
 
 const statusLabels = {
@@ -59,6 +75,8 @@ const typeLabels = {
 export default function WorkOrdersPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryOrderId = searchParams.get('id');
 
   // Shared dropdown data (cached via SWR)
   const { branches } = useBranches();
@@ -107,6 +125,12 @@ export default function WorkOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Edit + cancel for an existing order
+  const [editOrderOpen, setEditOrderOpen] = useState(false);
+  const [editOrderForm, setEditOrderForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
   // Auto-generate modal
   const [showAutoGenModal, setShowAutoGenModal] = useState(false);
   const [autoGenDate, setAutoGenDate] = useState(() => {
@@ -123,6 +147,14 @@ export default function WorkOrdersPage() {
       router.replace('/my-tasks');
     }
   }, [user, router]);
+
+  // Auto-open detail modal when ?id= present in URL
+  useEffect(() => {
+    if (queryOrderId) {
+      viewOrderDetails(queryOrderId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryOrderId]);
 
   // SWR for paginated work orders
   const orderParams = useMemo(() => {
@@ -166,7 +198,7 @@ export default function WorkOrdersPage() {
       setSelectedDeviceIds([]);
       invalidateWorkOrders();
     } catch (err) {
-      alert(err.message || 'שגיאה ביצירת הזמנת עבודה');
+      toast.error(err.message || 'שגיאה ביצירת הזמנת עבודה');
     } finally {
       setSaving(false);
     }
@@ -214,6 +246,59 @@ export default function WorkOrdersPage() {
     }
   }
 
+  function openEditOrder(order) {
+    setEditOrderForm({
+      scheduledDate: order.scheduledDate ? new Date(order.scheduledDate).toISOString().slice(0, 10) : '',
+      assignedTo: order.assignedTo?._id || order.assignedTo || '',
+      priority: order.priority || 'medium',
+      type: order.type || 'routine_refill',
+      estimatedDuration: order.estimatedDuration || '',
+      notes: order.notes || ''
+    });
+    setEditOrderOpen(true);
+  }
+
+  async function handleSaveOrderEdit() {
+    if (!editOrderForm.scheduledDate) {
+      toast.error('תאריך מתוכנן הוא שדה חובה');
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      const payload = {
+        scheduledDate: editOrderForm.scheduledDate,
+        priority: editOrderForm.priority,
+        type: editOrderForm.type,
+        notes: editOrderForm.notes,
+        estimatedDuration: editOrderForm.estimatedDuration ? Number(editOrderForm.estimatedDuration) : undefined,
+        assignedTo: editOrderForm.assignedTo || null
+      };
+      await workOrdersAPI.update(selectedOrder._id, payload);
+      const updated = await workOrdersAPI.getById(selectedOrder._id);
+      setSelectedOrder(updated);
+      invalidateWorkOrders();
+      toast.success('הזמנת העבודה עודכנה');
+      setEditOrderOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'שגיאה בעדכון הזמנה');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleConfirmCancel() {
+    try {
+      await workOrdersAPI.updateStatus(selectedOrder._id, 'cancelled');
+      const updated = await workOrdersAPI.getById(selectedOrder._id);
+      setSelectedOrder(updated);
+      invalidateWorkOrders();
+      toast.success('הזמנת העבודה בוטלה');
+      setCancelConfirmOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'שגיאה בביטול הזמנה');
+    }
+  }
+
   async function handleStatusChange(id, newStatus) {
     try {
       await workOrdersAPI.updateStatus(id, newStatus);
@@ -223,7 +308,7 @@ export default function WorkOrdersPage() {
         setSelectedOrder(updated);
       }
     } catch (err) {
-      alert(err.message || 'שגיאה בעדכון סטטוס');
+      toast.error(err.message || 'שגיאה בעדכון סטטוס');
     }
   }
 
@@ -248,7 +333,8 @@ export default function WorkOrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <WorkOrdersTabs />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -833,27 +919,150 @@ export default function WorkOrdersPage() {
             </div>
 
             {/* Actions */}
-            <div className="modal-footer flex-wrap">
-              {selectedOrder.status === 'pending' && (
-                <button
-                  onClick={() => handleStatusChange(selectedOrder._id, 'cancelled')}
-                  className="action-btn action-btn-danger flex items-center gap-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  ביטול
-                </button>
+            <div className="modal-footer flex-wrap gap-2">
+              {['pending', 'assigned'].includes(selectedOrder.status) && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditOrder(selectedOrder)}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    ערוך
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCancelConfirmOpen(true)}
+                    className="text-[var(--status-red-text)] border-red-200 hover:bg-red-50 hover:text-[var(--status-red-text)]"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    בטל הזמנה
+                  </Button>
+                </>
               )}
               <div className="flex-1" />
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowDetailModal(false)}
-                className="btn-secondary"
               >
                 סגור
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
+      {/* Edit work-order dialog */}
+      <Dialog open={editOrderOpen} onOpenChange={setEditOrderOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>עריכת הזמנת עבודה</DialogTitle>
+            <DialogDescription>עדכון תאריך, טכנאי, עדיפות והערות.</DialogDescription>
+          </DialogHeader>
+          {editOrderForm && (
+            <div className="grid gap-3 py-1">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="edit-date">תאריך מתוכנן *</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editOrderForm.scheduledDate}
+                    onChange={(e) => setEditOrderForm({ ...editOrderForm, scheduledDate: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="edit-tech">טכנאי</Label>
+                  <Select
+                    value={editOrderForm.assignedTo || 'none'}
+                    onValueChange={(v) => setEditOrderForm({ ...editOrderForm, assignedTo: v === 'none' ? '' : v })}
+                  >
+                    <SelectTrigger id="edit-tech"><SelectValue placeholder="בחר" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">ללא שיבוץ</SelectItem>
+                      {technicians.map(t => (
+                        <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="edit-priority">עדיפות</Label>
+                  <Select value={editOrderForm.priority} onValueChange={(v) => setEditOrderForm({ ...editOrderForm, priority: v })}>
+                    <SelectTrigger id="edit-priority"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(priorityLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="edit-type">סוג</Label>
+                  <Select value={editOrderForm.type} onValueChange={(v) => setEditOrderForm({ ...editOrderForm, type: v })}>
+                    <SelectTrigger id="edit-type"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(typeLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-1.5 max-w-[200px]">
+                <Label htmlFor="edit-duration">זמן משוער (דקות)</Label>
+                <Input
+                  id="edit-duration"
+                  type="number"
+                  min="0"
+                  value={editOrderForm.estimatedDuration}
+                  onChange={(e) => setEditOrderForm({ ...editOrderForm, estimatedDuration: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="edit-notes">הערות</Label>
+                <Textarea
+                  id="edit-notes"
+                  rows={2}
+                  value={editOrderForm.notes}
+                  onChange={(e) => setEditOrderForm({ ...editOrderForm, notes: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOrderOpen(false)} disabled={savingEdit}>ביטול</Button>
+            <Button onClick={handleSaveOrderEdit} disabled={savingEdit}>
+              {savingEdit ? 'שומר...' : 'שמור שינויים'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel work-order confirmation */}
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>לבטל את הזמנת העבודה?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ההזמנה תסומן כבוטלה. הטכנאי לא יראה אותה יותר ב"המשימות שלי".
+              לא ניתן לשחזר ביטול — אם בעתיד תרצי לתזמן שוב, צרי הזמנה חדשה.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>השאר פתוחה</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              className="bg-[var(--status-red)] text-white hover:bg-[var(--status-red)]/90"
+            >
+              כן, בטל הזמנה
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

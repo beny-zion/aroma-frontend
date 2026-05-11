@@ -2,6 +2,8 @@
 
 import { RefreshCw, Wifi, Calendar } from 'lucide-react';
 import { useDashboardStats } from '@/hooks/useData';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 // Dashboard Components
 import KPICard from '@/components/dashboard/KPICard';
@@ -64,96 +66,82 @@ export default function Dashboard() {
   const { kpis, refillStatus, geoDistribution, inventory, recentActivity } = dashboardData || {};
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">מרכז הבקרה</h1>
-          <p className="text-gray-500 mt-1">סקירה כללית של ארומה פלוס</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-strong)]">מרכז הבקרה</h1>
+          <p className="text-[var(--text-soft)] mt-0.5 text-sm">סקירה כללית של ארומה פלוס</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Wifi className="w-4 h-4 text-green-500" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--text-soft)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-green)]"></span>
             <span>נתונים מעודכנים</span>
           </div>
-          <button
-            onClick={() => refresh()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-          >
-            <RefreshCw className="w-4 h-4" />
+          <Button variant="outline" size="sm" onClick={() => refresh()}>
+            <RefreshCw className="w-3.5 h-3.5" />
             רענן
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Section 1: KPI Cards */}
-      <section>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          <KPICard
-            title="הכנסה חודשית צפויה"
-            value={kpis?.mrr || 0}
-            prefix="₪"
-            icon="money"
-            color="primary"
-            subtitle={`${kpis?.activeCustomers || 0} לקוחות פעילים`}
-          />
-          <KPICard
-            title="מכשירים פעילים"
-            value={kpis?.activeDevices || 0}
-            icon="devices"
-            color="blue"
-          />
-          <KPICard
-            title="נקודות שירות"
-            value={kpis?.activeBranches || 0}
-            icon="branches"
-            color="green"
-          />
-          <KPICard
-            title="קריאות שירות פתוחות"
-            value={kpis?.openServiceCalls || 0}
-            icon="alerts"
-            color={kpis?.openServiceCalls > 0 ? 'amber' : 'green'}
-          />
-        </div>
+      {/* KPI Cards */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KPICard
+          title="הכנסה חודשית צפויה"
+          value={kpis?.mrr || 0}
+          prefix="₪"
+          icon="money"
+          color="primary"
+          subtitle={`${kpis?.activeCustomers || 0} לקוחות פעילים`}
+        />
+        <KPICard
+          title="מכשירים פעילים"
+          value={kpis?.activeDevices || 0}
+          icon="devices"
+          color="blue"
+        />
+        <KPICard
+          title="נקודות שירות"
+          value={kpis?.activeBranches || 0}
+          icon="branches"
+          color="green"
+        />
+        <KPICard
+          title="קריאות פתוחות"
+          value={kpis?.openServiceCalls || 0}
+          icon="alerts"
+          color={kpis?.openServiceCalls > 0 ? 'amber' : 'green'}
+        />
       </section>
 
-      {/* Section 2: Operational Health */}
+      {/* Operational Health */}
       <section>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}></div>
-          <h2 className="text-xl font-bold text-gray-800">מרכז הבקרה התפעולי</h2>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionHeader title="מרכז הבקרה התפעולי" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <RefillStatusChart data={refillStatus} />
           <GeoDistributionChart data={geoDistribution} />
         </div>
       </section>
 
-      {/* Section 3: Inventory Intelligence */}
+      {/* Inventory */}
       <section>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: 'var(--color-primary-light)' }}></div>
-          <h2 className="text-xl font-bold text-gray-800">ניהול מלאי חכם</h2>
-        </div>
+        <SectionHeader title="ניהול מלאי" />
         <InventoryIntelligence
           lowStock={inventory?.lowStock}
           popularScents={inventory?.popularScents}
         />
       </section>
 
-      {/* Section 4: Recent Activity */}
+      {/* Recent Activity */}
       <section>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-1 h-6 rounded-full" style={{ backgroundColor: 'var(--color-primary-dark)' }}></div>
-          <h2 className="text-xl font-bold text-gray-800">פעילות אחרונה</h2>
-        </div>
+        <SectionHeader title="פעילות אחרונה" />
         <ActivityFeed activities={recentActivity} />
       </section>
 
       {/* Footer */}
-      <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-400">
-        <Calendar className="w-4 h-4" />
+      <div className="flex items-center justify-center gap-1.5 pt-2 text-xs text-[var(--text-faint)]">
+        <Calendar className="w-3 h-3" />
         <span>
           נוצר ב-{new Date(dashboardData?.generatedAt).toLocaleString('he-IL', {
             dateStyle: 'short',
@@ -161,6 +149,15 @@ export default function Dashboard() {
           })}
         </span>
       </div>
+    </div>
+  );
+}
+
+function SectionHeader({ title }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-0.5 h-4 rounded bg-[var(--brand)]" />
+      <h2 className="text-sm font-semibold text-[var(--text-strong)] tracking-tight">{title}</h2>
     </div>
   );
 }

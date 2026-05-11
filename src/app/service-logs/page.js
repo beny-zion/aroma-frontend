@@ -1,10 +1,14 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { serviceLogsAPI } from '@/lib/api';
 import { useAllDevices, useBranches, useScents, useInvalidate } from '@/hooks/useData';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
 import { FileText, Plus, Search, Calendar, Droplets, User, Eye, Edit3, Trash2, Filter, X, ClipboardList, Beaker, Camera } from 'lucide-react';
 import { thumbnailUrl } from '@/lib/cloudinary';
 
@@ -98,7 +102,7 @@ export default function ServiceLogsPage() {
       resetForm();
     } catch (err) {
       console.error('Error creating service log:', err);
-      alert(err.message || 'שגיאה ביצירת רישום');
+      toast.error(err.message || 'שגיאה ביצירת רישום');
     } finally {
       setSaving(false);
     }
@@ -124,7 +128,7 @@ export default function ServiceLogsPage() {
       resetForm();
     } catch (err) {
       console.error('Error updating service log:', err);
-      alert(err.message || 'שגיאה בעדכון רישום');
+      toast.error(err.message || 'שגיאה בעדכון רישום');
     } finally {
       setSaving(false);
     }
@@ -159,7 +163,7 @@ export default function ServiceLogsPage() {
       invalidateScents();
     } catch (err) {
       console.error('Error deleting service log:', err);
-      alert(err.message || 'שגיאה במחיקת רישום');
+      toast.error(err.message || 'שגיאה במחיקת רישום');
     } finally {
       setSaving(false);
     }
@@ -220,26 +224,18 @@ export default function ServiceLogsPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ background: 'var(--color-primary-50)' }}>
-              <FileText size={22} style={{ color: 'var(--color-primary)' }} />
-            </div>
-            יומן שירות
-          </h1>
-          <p className="page-subtitle">היסטוריית מילויים ושירותים</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary w-full md:w-auto"
-        >
-          <Plus size={18} />
+    <div className="space-y-4">
+      <PageHeader
+        title="יומן שירות"
+        subtitle="היסטוריית מילויים ושירותים"
+        icon={FileText}
+        count={pagination?.total ?? serviceLogs.length}
+      >
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
           רישום חדש
-        </button>
-      </div>
+        </Button>
+      </PageHeader>
 
       {/* סטטיסטיקות */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

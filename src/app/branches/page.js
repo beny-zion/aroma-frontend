@@ -1,5 +1,7 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import useSWR from 'swr';
@@ -7,6 +9,8 @@ import { branchesAPI, devicesAPI } from '@/lib/api';
 import { useAllCustomers, useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
 import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
 import { Building2, MapPin, Plus, Search, Eye, Edit3, Pause, Play, Trash2, Droplets, X } from 'lucide-react';
 
 export default function BranchesPage() {
@@ -108,7 +112,7 @@ export default function BranchesPage() {
       setNewScentId('');
     } catch (err) {
       console.error('Error updating device scent:', err);
-      alert('שגיאה בעדכון הריח');
+      toast.error('שגיאה בעדכון הריח');
     } finally {
       setSaving(false);
     }
@@ -148,7 +152,7 @@ export default function BranchesPage() {
       setSelectedCustomerAddress('');
     } catch (err) {
       console.error('Error creating branch:', err);
-      alert(err.message || 'שגיאה ביצירת סניף');
+      toast.error(err.message || 'שגיאה ביצירת סניף');
     } finally {
       setSaving(false);
     }
@@ -223,7 +227,7 @@ export default function BranchesPage() {
       setEditBranch(null);
     } catch (err) {
       console.error('Error updating branch:', err);
-      alert(err.message || 'שגיאה בעדכון סניף');
+      toast.error(err.message || 'שגיאה בעדכון סניף');
     } finally {
       setSaving(false);
     }
@@ -242,7 +246,7 @@ export default function BranchesPage() {
       setSelectedBranch(updated);
     } catch (err) {
       console.error('Error updating branch status:', err);
-      alert('שגיאה בעדכון סטטוס');
+      toast.error('שגיאה בעדכון סטטוס');
     } finally {
       setSaving(false);
     }
@@ -269,7 +273,7 @@ export default function BranchesPage() {
       setNewDeviceData({ deviceType: '', scentId: '', locationInBranch: '' });
     } catch (err) {
       console.error('Error adding device:', err);
-      alert(err.message || 'שגיאה בהוספת מכשיר');
+      toast.error(err.message || 'שגיאה בהוספת מכשיר');
     } finally {
       setSaving(false);
     }
@@ -284,7 +288,7 @@ export default function BranchesPage() {
       setSelectedBranch(updated);
     } catch (err) {
       console.error('Error updating device status:', err);
-      alert('שגיאה בעדכון סטטוס מכשיר');
+      toast.error('שגיאה בעדכון סטטוס מכשיר');
     } finally {
       setSaving(false);
     }
@@ -300,7 +304,7 @@ export default function BranchesPage() {
       setSelectedBranch(updated);
     } catch (err) {
       console.error('Error removing device:', err);
-      alert('שגיאה בהסרת מכשיר');
+      toast.error('שגיאה בהסרת מכשיר');
     } finally {
       setSaving(false);
     }
@@ -329,31 +333,18 @@ export default function BranchesPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 lg:p-8">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--color-primary-50)' }}>
-              <Building2 size={22} style={{ color: 'var(--color-primary)' }} />
-            </div>
-            סניפים
-          </h1>
-          <p className="page-subtitle">ניהול סניפים ומיקומים</p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
-            {branches.length} סניפים
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary"
-          >
-            <Plus size={18} />
-            סניף חדש
-          </button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="סניפים"
+        subtitle="ניהול סניפים ומיקומים"
+        icon={Building2}
+        count={branches.length}
+      >
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          סניף חדש
+        </Button>
+      </PageHeader>
 
       {/* פילטרים */}
       <div className="card">

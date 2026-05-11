@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { scheduleAPI } from '@/lib/api';
 import { useTechnicians, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
+import WorkOrdersTabs from '@/components/WorkOrdersTabs';
 import {
   DndContext,
   PointerSensor,
@@ -31,11 +33,11 @@ function toLocalDateString(d) {
   return `${y}-${m}-${day}`;
 }
 
-function thisOrNextSunday(date = new Date()) {
+function currentWeekSunday(date = new Date()) {
+  // Most recent Sunday: if today is Sunday → today, else go back to last Sunday
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  const diff = (7 - d.getDay()) % 7;
-  d.setDate(d.getDate() + diff);
+  d.setDate(d.getDate() - d.getDay()); // getDay() 0=Sun, 1=Mon, ..., 6=Sat
   return toLocalDateString(d);
 }
 
@@ -318,7 +320,7 @@ export default function SchedulePage() {
   const { technicians } = useTechnicians();
   const { invalidateWorkOrders } = useInvalidate();
 
-  const [startDate, setStartDate] = useState(() => thisOrNextSunday());
+  const [startDate, setStartDate] = useState(() => currentWeekSunday());
   const [daysAhead, setDaysAhead] = useState(30);
   const [maxBranchesPerDay, setMaxBranchesPerDay] = useState(30);
 
@@ -358,7 +360,7 @@ export default function SchedulePage() {
       setSummary(result.summary || null);
       setExpandedBlockIds(new Set());
     } catch (err) {
-      alert(err.message || 'שגיאה בקבלת הצעת מסלול');
+      toast.error(err.message || 'שגיאה בקבלת הצעת מסלול');
     } finally {
       setLoading(false);
     }
@@ -458,7 +460,7 @@ export default function SchedulePage() {
   function handlePlanRoute(branches) {
     const url = buildRouteUrl(branches);
     if (!url) {
-      alert('אין כתובות לסניפים ביום זה');
+      toast.error('אין כתובות לסניפים ביום זה');
       return;
     }
     window.open(url, '_blank');
@@ -475,7 +477,7 @@ export default function SchedulePage() {
   async function handleSave() {
     const totalBranches = days.reduce((s, d) => s + d.blocks.reduce((ss, b) => ss + b.branches.length, 0), 0);
     if (totalBranches === 0) {
-      alert('אין סניפים לשמירה');
+      toast.warning('אין סניפים לשמירה');
       return;
     }
     if (!confirm(`לשמור את המסלול? (${totalBranches} סניפים)`)) return;
@@ -490,7 +492,7 @@ export default function SchedulePage() {
         message: result.message
       });
     } catch (err) {
-      alert(err.message || 'שגיאה בשמירת המסלול');
+      toast.error(err.message || 'שגיאה בשמירת המסלול');
     } finally {
       setSaving(false);
     }
@@ -506,7 +508,8 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      <WorkOrdersTabs />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">

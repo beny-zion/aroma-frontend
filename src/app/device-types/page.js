@@ -1,10 +1,14 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState } from 'react';
 import useSWR from 'swr';
 import { deviceTypesAPI } from '@/lib/api';
 import { useInvalidate } from '@/hooks/useData';
 import { Settings, Plus, Search, Edit3, Trash2, Package, AlertTriangle, Pause, Play } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
 
 export default function DeviceTypesPage() {
   const { data: deviceTypes = [], isLoading: loading } = useSWR('/device-types?all=true');
@@ -59,7 +63,7 @@ export default function DeviceTypesPage() {
       resetForm();
     } catch (err) {
       console.error('Error creating device type:', err);
-      alert(err.message || 'שגיאה ביצירת סוג מכשיר');
+      toast.error(err.message || 'שגיאה ביצירת סוג מכשיר');
     } finally {
       setSaving(false);
     }
@@ -78,7 +82,7 @@ export default function DeviceTypesPage() {
       resetForm();
     } catch (err) {
       console.error('Error updating device type:', err);
-      alert(err.message || 'שגיאה בעדכון סוג מכשיר');
+      toast.error(err.message || 'שגיאה בעדכון סוג מכשיר');
     } finally {
       setSaving(false);
     }
@@ -118,7 +122,7 @@ export default function DeviceTypesPage() {
       setStockToAdd('');
     } catch (err) {
       console.error('Error adding stock:', err);
-      alert(err.message || 'שגיאה בהוספת מלאי');
+      toast.error(err.message || 'שגיאה בהוספת מלאי');
     } finally {
       setSaving(false);
     }
@@ -131,7 +135,7 @@ export default function DeviceTypesPage() {
       invalidateDeviceTypes();
     } catch (err) {
       console.error('Error toggling status:', err);
-      alert('שגיאה בעדכון סטטוס');
+      toast.error('שגיאה בעדכון סטטוס');
     } finally {
       setSaving(false);
     }
@@ -146,7 +150,7 @@ export default function DeviceTypesPage() {
       invalidateDeviceTypes();
     } catch (err) {
       console.error('Error deleting device type:', err);
-      alert(err.message || 'שגיאה במחיקת סוג מכשיר');
+      toast.error(err.message || 'שגיאה במחיקת סוג מכשיר');
     } finally {
       setSaving(false);
     }
@@ -176,24 +180,18 @@ export default function DeviceTypesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Settings className="w-7 h-7 text-(--color-primary)" />
-            סוגי מכשירים
-          </h1>
-          <p className="page-subtitle">ניהול סוגי המכשירים במערכת</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary"
-        >
-          <Plus className="w-5 h-5" />
+    <div className="space-y-4">
+      <PageHeader
+        title="סוגי מכשירים"
+        subtitle="ניהול סוגי המכשירים במערכת"
+        icon={Settings}
+        count={deviceTypes?.length}
+      >
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
           סוג מכשיר חדש
-        </button>
-      </div>
+        </Button>
+      </PageHeader>
 
       {/* סטטיסטיקות */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

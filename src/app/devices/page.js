@@ -1,11 +1,15 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { devicesAPI } from '@/lib/api';
 import { useScents, useActiveDeviceTypes, useBranches, useInvalidate } from '@/hooks/useData';
 import StatusBadge from '@/components/StatusBadge';
 import Pagination from '@/components/Pagination';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
 import { Cpu, Search, Plus, Edit3, Pause, Play, Trash2, Droplets } from 'lucide-react';
 
 export default function DevicesPage() {
@@ -79,7 +83,7 @@ export default function DevicesPage() {
       });
     } catch (err) {
       console.error('Error creating device:', err);
-      alert(err.message || 'שגיאה ביצירת מכשיר');
+      toast.error(err.message || 'שגיאה ביצירת מכשיר');
     } finally {
       setSaving(false);
     }
@@ -103,7 +107,7 @@ export default function DevicesPage() {
       setSelectedDevice(null);
     } catch (err) {
       console.error('Error updating device:', err);
-      alert(err.message || 'שגיאה בעדכון מכשיר');
+      toast.error(err.message || 'שגיאה בעדכון מכשיר');
     } finally {
       setSaving(false);
     }
@@ -130,7 +134,7 @@ export default function DevicesPage() {
       invalidateDevices();
     } catch (err) {
       console.error('Error updating device status:', err);
-      alert('שגיאה בעדכון סטטוס');
+      toast.error('שגיאה בעדכון סטטוס');
     } finally {
       setSaving(false);
     }
@@ -146,7 +150,7 @@ export default function DevicesPage() {
       invalidateDevices();
     } catch (err) {
       console.error('Error deleting device:', err);
-      alert('שגיאה במחיקת מכשיר');
+      toast.error('שגיאה במחיקת מכשיר');
     } finally {
       setSaving(false);
     }
@@ -177,29 +181,18 @@ export default function DevicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Cpu size={28} style={{ color: 'var(--color-primary)' }} />
-            מכשירים
-          </h1>
-          <p className="page-subtitle">ניהול כל המכשירים במערכת</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
-            {pagination?.total || devices.length} מכשירים
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary w-full sm:w-auto"
-          >
-            <Plus size={18} />
-            מכשיר חדש
-          </button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="מכשירים"
+        subtitle="ניהול כל המכשירים במערכת"
+        icon={Cpu}
+        count={pagination?.total || devices.length}
+      >
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          מכשיר חדש
+        </Button>
+      </PageHeader>
 
       {/* פילטרים */}
       <div className="card">

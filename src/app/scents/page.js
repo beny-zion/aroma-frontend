@@ -1,10 +1,14 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState } from 'react';
 import useSWR from 'swr';
 import { scentsAPI } from '@/lib/api';
 import { useInvalidate } from '@/hooks/useData';
 import { Droplets, Plus, Search, AlertTriangle, Package, TrendingUp } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
 
 export default function ScentsPage() {
   const { data: scents = [], isLoading: loading } = useSWR('/scents?all=true');
@@ -35,7 +39,7 @@ export default function ScentsPage() {
       setSelectedScent(null);
     } catch (err) {
       console.error('Error adding stock:', err);
-      alert('שגיאה בהוספת מלאי');
+      toast.error('שגיאה בהוספת מלאי');
     } finally {
       setSaving(false);
     }
@@ -57,7 +61,7 @@ export default function ScentsPage() {
       setNewScent({ name: '', stockQuantity: '', description: '' });
     } catch (err) {
       console.error('Error creating scent:', err);
-      alert(err.message || 'שגיאה ביצירת ריח');
+      toast.error(err.message || 'שגיאה ביצירת ריח');
     } finally {
       setSaving(false);
     }
@@ -78,32 +82,18 @@ export default function ScentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Droplets className="w-7 h-7 text-(--color-primary)" />
-            ריחות
-          </h1>
-          <p className="page-subtitle">ניהול מלאי ריחות</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="text-left">
-            <div className="text-2xl font-bold text-(--color-primary)">{scents.length} ריחות</div>
-            <div className="text-sm text-gray-500">
-              סה"כ מלאי: {(totalStock / 1000).toFixed(1)} ליטר
-            </div>
-          </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary"
-          >
-            <Plus className="w-5 h-5" />
-            ריח חדש
-          </button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="ריחות"
+        subtitle={`ניהול מלאי · סה"כ ${(totalStock / 1000).toFixed(1)} ליטר במלאי`}
+        icon={Droplets}
+        count={scents.length}
+      >
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          ריח חדש
+        </Button>
+      </PageHeader>
 
       {/* התראת מלאי נמוך */}
       {lowStockScents.length > 0 && (

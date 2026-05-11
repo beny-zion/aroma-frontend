@@ -3,6 +3,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import LayoutShell from '@/components/LayoutShell';
 import PWARegister from '@/components/PWARegister';
 import SWRProvider from '@/components/SWRProvider';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export const metadata = {
   title: 'ארומה פלוס - מערכת ניהול',
@@ -46,13 +48,16 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="he" dir="rtl">
-      <body className="bg-gray-50 min-h-screen">
+      <body className="bg-background min-h-screen">
         <PWARegister />
         <SWRProvider>
           <AuthProvider>
-            <LayoutShell>
-              {children}
-            </LayoutShell>
+            <TooltipProvider delayDuration={300}>
+              <LayoutShell>
+                {children}
+              </LayoutShell>
+              <Toaster position="top-center" richColors closeButton dir="rtl" />
+            </TooltipProvider>
           </AuthProvider>
         </SWRProvider>
       </body>

@@ -1,12 +1,17 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { customersAPI, branchesAPI, devicesAPI } from '@/lib/api';
 import { useScents, useActiveDeviceTypes, useInvalidate } from '@/hooks/useData';
 import Pagination from '@/components/Pagination';
-import { Users, Plus, Search, Phone, Mail, Building2, Edit3, MapPin, CreditCard, X } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
+import { Button } from '@/components/ui/button';
+import { Users, Plus, Search, Phone, Mail, Building2, Edit3, MapPin, CreditCard, X, LayoutGrid, List } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -22,6 +27,17 @@ export default function CustomersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // View mode (persisted)
+  const [viewMode, setViewMode] = useState('cards');
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('customers_view_mode') : null;
+    if (saved === 'list' || saved === 'cards') setViewMode(saved);
+  }, []);
+  function changeViewMode(mode) {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') localStorage.setItem('customers_view_mode', mode);
+  }
 
   // טופס יצירת לקוח חדש
   const [newCustomer, setNewCustomer] = useState({
@@ -146,7 +162,7 @@ export default function CustomersPage() {
       setShowCreateModal(false);
       resetNewCustomerForm();
     } catch (err) {
-      alert(err.message || 'שגיאה ביצירת לקוח');
+      toast.error(err.message || 'שגיאה ביצירת לקוח');
     } finally {
       setSaving(false);
     }
@@ -260,7 +276,7 @@ export default function CustomersPage() {
       setShowEditModal(false);
       setEditCustomer(null);
     } catch (err) {
-      alert(err.message || 'שגיאה בעדכון לקוח');
+      toast.error(err.message || 'שגיאה בעדכון לקוח');
     } finally {
       setSaving(false);
     }
@@ -279,7 +295,7 @@ export default function CustomersPage() {
       const updated = await customersAPI.getById(selectedCustomer._id);
       setSelectedCustomer(updated);
     } catch (err) {
-      alert('שגיאה בעדכון סטטוס');
+      toast.error('שגיאה בעדכון סטטוס');
     } finally {
       setSaving(false);
     }
@@ -302,30 +318,42 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 lg:p-8">
-      {/* כותרת */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Users className="w-7 h-7 text-[var(--color-primary)]" />
-            לקוחות
-          </h1>
-          <p className="page-subtitle">ניהול לקוחות משלמים</p>
-        </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-          <div className="text-start sm:text-left">
-            <div className="text-xl md:text-2xl font-bold text-[var(--color-primary)]">{customers.length} לקוחות</div>
-            <div className="text-sm text-[var(--color-text-secondary)]">הכנסה חודשית: {totalMonthly.toLocaleString()} &#8362;</div>
-          </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="לקוחות"
+        subtitle={`ניהול לקוחות משלמים · הכנסה חודשית ₪${totalMonthly.toLocaleString()}`}
+        icon={Users}
+        count={customers.length}
+      >
+        <div className="flex items-center rounded-md border bg-card p-0.5">
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary w-full sm:w-auto"
+            onClick={() => changeViewMode('cards')}
+            className={cn(
+              'h-7 w-8 rounded inline-flex items-center justify-center transition-colors',
+              viewMode === 'cards' ? 'bg-[var(--brand-50)] text-[var(--brand-hover)]' : 'text-[var(--text-muted)] hover:text-[var(--text-strong)]'
+            )}
+            title="תצוגת קלפים"
+            aria-label="תצוגת קלפים"
           >
-            <Plus className="w-5 h-5" />
-            לקוח חדש
+            <LayoutGrid className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => changeViewMode('list')}
+            className={cn(
+              'h-7 w-8 rounded inline-flex items-center justify-center transition-colors',
+              viewMode === 'list' ? 'bg-[var(--brand-50)] text-[var(--brand-hover)]' : 'text-[var(--text-muted)] hover:text-[var(--text-strong)]'
+            )}
+            title="תצוגת רשימה"
+            aria-label="תצוגת רשימה"
+          >
+            <List className="h-3.5 w-3.5" />
           </button>
         </div>
-      </div>
+        <Button onClick={() => setShowCreateModal(true)} size="sm">
+          <Plus className="h-4 w-4" />
+          לקוח חדש
+        </Button>
+      </PageHeader>
 
       {/* חיפוש */}
       <div className="card">
@@ -342,62 +370,114 @@ export default function CustomersPage() {
       </div>
 
       {/* רשימת לקוחות */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredCustomers.map((customer) => (
-          <div
-            key={customer._id}
-            className="card hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => router.push(`/customers/${customer._id}`)}
-          >
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="font-bold text-lg text-[var(--color-text-primary)]">{customer.name}</h3>
-              <span className={`status-badge ${
-                customer.status === 'active'
-                  ? 'status-badge-green'
-                  : customer.status === 'pending'
-                  ? 'status-badge-yellow'
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                {customer.status === 'active' ? 'פעיל' :
-                 customer.status === 'pending' ? 'בתהליך' : 'לא פעיל'}
-              </span>
-            </div>
+      {viewMode === 'cards' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredCustomers.map((customer) => (
+            <div
+              key={customer._id}
+              className="card cursor-pointer hover:border-[var(--border-strong)] transition-colors"
+              onClick={() => router.push(`/customers/${customer._id}`)}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-semibold text-[var(--text-strong)]">{customer.name}</h3>
+                <span className={`status-badge ${
+                  customer.status === 'active'
+                    ? 'status-badge-green'
+                    : customer.status === 'pending'
+                    ? 'status-badge-yellow'
+                    : 'bg-[var(--surface-muted)] text-[var(--text-soft)]'
+                }`}>
+                  {customer.status === 'active' ? 'פעיל' :
+                   customer.status === 'pending' ? 'בתהליך' : 'לא פעיל'}
+                </span>
+              </div>
 
-            <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
-              {customer.billingDetails?.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-[var(--color-primary)]" />
-                  <span>{customer.billingDetails.phone}</span>
-                </div>
-              )}
-              {customer.billingDetails?.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[var(--color-primary)]" />
-                  <span className="truncate">{customer.billingDetails.email}</span>
-                </div>
-              )}
-              {customer.billingDetails?.taxId && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-[var(--color-primary)]" />
-                  <span>ע.מ: {customer.billingDetails.taxId}</span>
-                </div>
-              )}
-            </div>
+              <div className="space-y-1 text-[12.5px] text-[var(--text-soft)]">
+                {customer.billingDetails?.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="w-3 h-3 text-[var(--text-muted)]" />
+                    <span>{customer.billingDetails.phone}</span>
+                  </div>
+                )}
+                {customer.billingDetails?.email && (
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="w-3 h-3 text-[var(--text-muted)]" />
+                    <span className="truncate">{customer.billingDetails.email}</span>
+                  </div>
+                )}
+                {customer.billingDetails?.taxId && (
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3 text-[var(--text-muted)]" />
+                    <span>ע.מ: {customer.billingDetails.taxId}</span>
+                  </div>
+                )}
+              </div>
 
-            <div className="mt-4 pt-3 border-t border-[var(--color-border-light)] flex justify-between items-center">
-              <span className="text-[var(--color-text-muted)] text-sm">מחיר חודשי</span>
-              <span className="text-xl font-bold text-[var(--color-primary)]">
-                {(customer.monthlyPrice || 0).toLocaleString()} &#8362;
-              </span>
+              <div className="mt-3 pt-2 border-t border-[var(--border-soft)] flex justify-between items-center">
+                <span className="text-[var(--text-muted)] text-xs">מחיר חודשי</span>
+                <span className="text-base font-bold text-[var(--brand)] font-tabular">
+                  {(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>שם</th>
+                <th>סטטוס</th>
+                <th>טלפון</th>
+                <th>אימייל</th>
+                <th>ע.מ</th>
+                <th className="text-left">מחיר חודשי</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.map((customer) => (
+                <tr
+                  key={customer._id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/customers/${customer._id}`)}
+                >
+                  <td className="font-semibold text-[var(--text-strong)]">{customer.name}</td>
+                  <td>
+                    <span className={`status-badge ${
+                      customer.status === 'active'
+                        ? 'status-badge-green'
+                        : customer.status === 'pending'
+                        ? 'status-badge-yellow'
+                        : 'bg-[var(--surface-muted)] text-[var(--text-soft)]'
+                    }`}>
+                      {customer.status === 'active' ? 'פעיל' :
+                       customer.status === 'pending' ? 'בתהליך' : 'לא פעיל'}
+                    </span>
+                  </td>
+                  <td className="text-[var(--text-soft)] font-tabular">{customer.billingDetails?.phone || '-'}</td>
+                  <td className="text-[var(--text-soft)] truncate max-w-[200px]">{customer.billingDetails?.email || '-'}</td>
+                  <td className="text-[var(--text-soft)] font-tabular">{customer.billingDetails?.taxId || '-'}</td>
+                  <td className="text-left font-bold text-[var(--brand)] font-tabular">
+                    {(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {filteredCustomers.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon"><Users className="w-6 h-6" /></div>
+              <p>לא נמצאו לקוחות התואמים לחיפוש</p>
+            </div>
+          )}
+        </div>
+      )}
 
-      {filteredCustomers.length === 0 && (
+      {viewMode === 'cards' && filteredCustomers.length === 0 && (
         <div className="empty-state">
           <div className="empty-state-icon">
-            <Users className="w-7 h-7" />
+            <Users className="w-6 h-6" />
           </div>
           <p>לא נמצאו לקוחות התואמים לחיפוש</p>
         </div>

@@ -1,5 +1,7 @@
 'use client';
 
+import { toast } from 'sonner';
+
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { serviceLogsAPI } from '@/lib/api';
@@ -61,7 +63,7 @@ export default function RefillPage() {
     e.preventDefault();
 
     if (!selectedDevice || !mlFilled) {
-      alert('יש לבחור מכשיר ולהזין כמות מילוי');
+      toast.error('יש לבחור מכשיר ולהזין כמות מילוי');
       return;
     }
 
@@ -93,7 +95,7 @@ export default function RefillPage() {
 
     } catch (err) {
       console.error('Error saving refill:', err);
-      alert(err.message || 'שגיאה בשמירת המילוי');
+      toast.error(err.message || 'שגיאה בשמירת המילוי');
     } finally {
       setSaving(false);
     }
