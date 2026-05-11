@@ -23,6 +23,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Building2, MapPin, Phone, User, Droplets, Eye,
   ArrowRight, Loader2, Edit3, Plus, MoreVertical, Pause, Play
@@ -257,7 +258,28 @@ export default function BranchDetailPage() {
         </div>
       </div>
 
-      {/* פרטי סניף */}
+      <Tabs defaultValue="details" className="w-full" dir="rtl">
+        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1">
+          <TabsTrigger value="details" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            פרטים
+          </TabsTrigger>
+          <TabsTrigger value="devices" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            מכשירים
+            {branch.devices?.length > 0 && (
+              <span className="text-[var(--text-soft)] font-tabular ms-1">({branch.devices.length})</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="visits" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            ביקורים
+          </TabsTrigger>
+          <TabsTrigger value="docs" disabled className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm opacity-50">
+            תיעוד
+            <span className="text-[10px] font-medium px-1 py-0 rounded bg-[var(--brand-50)] text-[var(--brand-hover)] ms-1">בקרוב</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB: פרטים */}
+        <TabsContent value="details" className="mt-4 space-y-4">
       <div className="card">
         <h2 className="font-semibold text-sm flex items-center gap-2 text-[var(--text-strong)] mb-3">
           <Building2 className="w-4 h-4 text-[var(--brand)]" />
@@ -285,10 +307,15 @@ export default function BranchDetailPage() {
         )}
       </div>
 
-      {/* ביקורים */}
-      <VisitsPanel branchId={branch._id} title="ביקורים והזמנות עבודה" />
+        </TabsContent>
 
-      {/* מכשירים בסניף */}
+        {/* TAB: ביקורים */}
+        <TabsContent value="visits" className="mt-4">
+          <VisitsPanel branchId={branch._id} title="ביקורים והזמנות עבודה" />
+        </TabsContent>
+
+        {/* TAB: מכשירים */}
+        <TabsContent value="devices" className="mt-4">
       <div>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
@@ -478,6 +505,8 @@ export default function BranchDetailPage() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Edit branch dialog */}
       <Dialog open={branchOpen} onOpenChange={setBranchOpen}>

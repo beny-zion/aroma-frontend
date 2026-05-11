@@ -22,6 +22,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Droplets, MapPin, Calendar, Wrench, PlusCircle, MinusCircle,
   RefreshCw, ArrowRight, Loader2, Clock, User, FileText,
@@ -251,7 +252,24 @@ export default function DeviceDetailPage() {
         </div>
       </div>
 
-      {/* כרטיס פרטי מכשיר */}
+      <Tabs defaultValue="details" className="w-full" dir="rtl">
+        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1">
+          <TabsTrigger value="details" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            פרטים
+          </TabsTrigger>
+          <TabsTrigger value="history" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            היסטוריית שירות
+            {serviceLogs.length > 0 && (
+              <span className="text-[var(--text-soft)] font-tabular ms-1">({serviceLogs.length})</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="visits" className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm">
+            הזמנות עבודה
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB: פרטים */}
+        <TabsContent value="details" className="mt-4 space-y-4">
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
@@ -336,10 +354,15 @@ export default function DeviceDetailPage() {
         )}
       </div>
 
-      {/* ביקורים והזמנות עבודה הכוללות מכשיר זה */}
-      <VisitsPanel deviceId={device._id} title="הזמנות עבודה הכוללות מכשיר זה" />
+        </TabsContent>
 
-      {/* היסטוריית שירות */}
+        {/* TAB: ביקורים */}
+        <TabsContent value="visits" className="mt-4">
+          <VisitsPanel deviceId={device._id} title="הזמנות עבודה הכוללות מכשיר זה" />
+        </TabsContent>
+
+        {/* TAB: היסטוריית שירות */}
+        <TabsContent value="history" className="mt-4">
       <div>
         <h2 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
           <FileText className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
@@ -449,6 +472,9 @@ export default function DeviceDetailPage() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
+
       {/* Edit device dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg">

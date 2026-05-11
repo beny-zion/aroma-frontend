@@ -21,6 +21,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Users, Phone, Mail, Building2, CreditCard, MapPin,
   ArrowRight, Edit3, Eye, Loader2, Plus, MoreVertical, Pause, Play, Trash2,
@@ -248,59 +249,83 @@ export default function CustomerDetailPage() {
         </Button>
       </div>
 
-      {/* כרטיס פרטי לקוח */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm flex items-center gap-2 text-[var(--text-strong)]">
-            <CreditCard className="w-4 h-4 text-[var(--brand)]" />
-            פרטי לקוח
-          </h2>
-        </div>
+      <Tabs defaultValue="details" className="w-full" dir="rtl">
+        <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1">
+          <TabsTrigger
+            value="details"
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm"
+          >
+            פרטים
+          </TabsTrigger>
+          <TabsTrigger
+            value="branches"
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm"
+          >
+            סניפים
+            {customer.branches?.length > 0 && (
+              <span className="text-[var(--text-soft)] font-tabular ms-1">({customer.branches.length})</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="visits"
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm"
+          >
+            ביקורים
+          </TabsTrigger>
+          <TabsTrigger
+            value="payments"
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm"
+          >
+            תשלומים
+          </TabsTrigger>
+          <TabsTrigger
+            value="docs"
+            disabled
+            className="!flex-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[var(--brand)] data-[state=active]:text-[var(--brand)] data-[state=active]:shadow-none rounded-none border-b-2 border-transparent px-4 py-2 text-sm opacity-50"
+          >
+            תיעוד
+            <span className="text-[10px] font-medium px-1 py-0 rounded bg-[var(--brand-50)] text-[var(--brand-hover)] ms-1">בקרוב</span>
+          </TabsTrigger>
+        </TabsList>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <DetailRow icon={Phone} label="טלפון" value={customer.billingDetails?.phone} />
-          <DetailRow icon={Mail} label="אימייל" value={customer.billingDetails?.email} />
-          <DetailRow icon={Building2} label="ע.מורשה" value={customer.billingDetails?.taxId} />
-          <DetailRow icon={MapPin} label="כתובת" value={customer.billingDetails?.address} />
-          <DetailRow
-            icon={CreditCard}
-            label="מחיר חודשי"
-            value={`${(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪`}
-            highlight
-          />
-        </div>
-
-        {customer.notes && (
-          <div className="mt-3 pt-3 border-t border-[var(--border-soft)]">
-            <span className="text-xs text-[var(--text-soft)]">הערות: </span>
-            <span className="text-sm text-[var(--text-default)]">{customer.notes}</span>
+        {/* TAB: פרטים */}
+        <TabsContent value="details" className="mt-4 space-y-4">
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-sm flex items-center gap-2 text-[var(--text-strong)]">
+                <CreditCard className="w-4 h-4 text-[var(--brand)]" />
+                פרטי לקוח
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <DetailRow icon={Phone} label="טלפון" value={customer.billingDetails?.phone} />
+              <DetailRow icon={Mail} label="אימייל" value={customer.billingDetails?.email} />
+              <DetailRow icon={Building2} label="ע.מורשה" value={customer.billingDetails?.taxId} />
+              <DetailRow icon={MapPin} label="כתובת" value={customer.billingDetails?.address} />
+              <DetailRow
+                icon={CreditCard}
+                label="מחיר חודשי"
+                value={`${(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪`}
+                highlight
+              />
+            </div>
+            {customer.notes && (
+              <div className="mt-3 pt-3 border-t border-[var(--border-soft)]">
+                <span className="text-xs text-[var(--text-soft)]">הערות: </span>
+                <span className="text-sm text-[var(--text-default)]">{customer.notes}</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
 
-      {/* ביקורים */}
-      <VisitsPanel customerId={customer._id} title="ביקורים בכל הסניפים" />
-
-      {/* תשלומים */}
-      <PaymentsPanel customer={customer} />
-
-      {/* סניפים */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-[var(--brand)]" />
-            <h2 className="text-sm font-semibold text-[var(--text-strong)]">
-              סניפים
-              {customer.branches && (
-                <span className="text-[var(--text-soft)] font-medium font-tabular"> ({customer.branches.length})</span>
-              )}
-            </h2>
+        {/* TAB: סניפים */}
+        <TabsContent value="branches" className="mt-4 space-y-3">
+          <div className="flex items-center justify-end mb-1">
+            <Button size="sm" variant="outline" onClick={openAddBranch}>
+              <Plus className="w-4 h-4" />
+              סניף חדש
+            </Button>
           </div>
-          <Button size="sm" variant="outline" onClick={openAddBranch}>
-            <Plus className="w-4 h-4" />
-            סניף חדש
-          </Button>
-        </div>
 
         {customer.branches && customer.branches.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -402,7 +427,18 @@ export default function CustomerDetailPage() {
             <p>אין סניפים עדיין ללקוח זה</p>
           </div>
         )}
-      </div>
+        </TabsContent>
+
+        {/* TAB: ביקורים */}
+        <TabsContent value="visits" className="mt-4">
+          <VisitsPanel customerId={customer._id} title="ביקורים בכל הסניפים" />
+        </TabsContent>
+
+        {/* TAB: תשלומים */}
+        <TabsContent value="payments" className="mt-4">
+          <PaymentsPanel customer={customer} />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
