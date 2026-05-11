@@ -129,7 +129,8 @@ function CityGroupHandle({ city, blocks, dayDate, isOverlay = false }) {
       style={{
         backgroundColor: colors.chip,
         borderColor: colors.accent,
-        touchAction: 'none'
+        // Allow page scroll on touch — TouchSensor delay (250ms) tells drag apart from scroll
+        touchAction: 'pan-y'
       }}
     >
       <GripVertical className="w-4 h-4 shrink-0" style={{ color: colors.accent }} />
@@ -172,7 +173,9 @@ function BlockCard({ block, expanded, onToggle, isOverlay = false }) {
         {...listeners}
         {...attributes}
         className="p-3 cursor-grab active:cursor-grabbing"
-        style={{ touchAction: 'none' }}
+        // Allow vertical page scroll on touch. Drag activates only after a 250ms
+        // hold via the TouchSensor delay, so a quick swipe still scrolls.
+        style={{ touchAction: 'pan-y' }}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
