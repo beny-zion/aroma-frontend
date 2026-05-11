@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { scheduleAPI } from '@/lib/api';
@@ -20,6 +20,7 @@ import {
 import {
   CalendarDays, Sparkles, Save, MapPin, Navigation, AlertCircle,
   Building2, Loader2, Settings as SettingsIcon, ChevronDown, ChevronUp,
+  ChevronLeft, ChevronRight,
   CheckCircle, ExternalLink, GripVertical, Bookmark, Lock
 } from 'lucide-react';
 import Link from 'next/link';
@@ -39,6 +40,24 @@ function currentWeekSunday(date = new Date()) {
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() - d.getDay()); // getDay() 0=Sun, 1=Mon, ..., 6=Sat
   return toLocalDateString(d);
+}
+
+function addDaysToISO(isoDate, days) {
+  const [y, m, d] = String(isoDate).split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return toLocalDateString(dt);
+}
+
+// Returns a friendly week label: "השבוע" / "השבוע הבא" / "השבוע הקודם" / "26/5 – 30/5"
+function weekLabel(startISO) {
+  const todaySunday = currentWeekSunday();
+  if (startISO === todaySunday) return 'השבוע';
+  if (startISO === addDaysToISO(todaySunday, 7)) return 'השבוע הבא';
+  if (startISO === addDaysToISO(todaySunday, -7)) return 'השבוע הקודם';
+  if (startISO === addDaysToISO(todaySunday, 14)) return 'בעוד שבועיים';
+  const end = addDaysToISO(startISO, 4);
+  return `${formatDateShort(startISO)} – ${formatDateShort(end)}`;
 }
 
 function formatDateShort(isoDate) {
@@ -289,26 +308,81 @@ function DayColumn({ day, technicians, cap, onTechChange, onPlanRoute, expandedB
         )}
       </div>
 
-      <div ref={setNodeRef} className="flex-1 p-2 space-y-3 overflow-y-auto" style={{ minHeight: '200px' }}>
-        {day.blocks.length === 0 ? (
-          <div className="text-center text-xs text-gray-400 py-8">גרור עיר לכאן</div>
-        ) : (
-          groupBlocksByCity(day.blocks).map(group => (
-            <div key={group.city} className="space-y-2">
-              {group.blocks.length > 1 && (
-                <CityGroupHandle city={group.city} blocks={group.blocks} dayDate={day.date} />
+      {/* Body — split into two sections: existing (locked) on top, new suggestions on bottom */}
+      <div ref={setNodeRef} className="flex-1 flex flex-col overflow-y-auto" style={{ minHeight: '200px' }}>
+        {(() => {
+          const existingBlocks = day.blocks.filter(b => b.existingWorkOrderId);
+          const newBlocks = day.blocks.filter(b => !b.existingWorkOrderId);
+
+          return (
+            <>
+              {/* Section 1: existing WOs (draggable too — moving updates the WO date on save) */}
+              {existingBlocks.length > 0 && (
+                <div className="px-2 pt-2 pb-1">
+                  <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+                    <Bookmark className="w-3 h-3" />
+                    כבר משובץ ({existingBlocks.reduce((s, b) => s + b.branches.length, 0)})
+                  </div>
+                  <div className="space-y-2">
+                    {groupBlocksByCity(existingBlocks).map(group => (
+                      <div key={`existing-${group.city}`} className="space-y-2">
+                        {group.blocks.length > 1 && (
+                          <CityGroupHandle city={group.city} blocks={group.blocks} dayDate={day.date} />
+                        )}
+                        {group.blocks.map(block => (
+                          <BlockCard
+                            key={block.id}
+                            block={block}
+                            expanded={expandedBlockIds.has(block.id)}
+                            onToggle={() => onToggleBlock(block.id)}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
-              {group.blocks.map(block => (
-                <BlockCard
-                  key={block.id}
-                  block={block}
-                  expanded={expandedBlockIds.has(block.id)}
-                  onToggle={() => onToggleBlock(block.id)}
-                />
-              ))}
-            </div>
-          ))
-        )}
+
+              {/* Divider when both sections present */}
+              {existingBlocks.length > 0 && newBlocks.length > 0 && (
+                <div className="mx-2 my-2 border-t border-dashed" style={{ borderColor: 'var(--color-border-light)' }} />
+              )}
+
+              {/* Section 2: new suggestions (draggable) */}
+              <div className="px-2 pb-2 pt-1 flex-1">
+                {newBlocks.length === 0 && existingBlocks.length === 0 ? (
+                  <div className="text-center text-xs text-gray-400 py-8">גרור עיר לכאן</div>
+                ) : newBlocks.length > 0 ? (
+                  <>
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+                      <Sparkles className="w-3 h-3" />
+                      הצעות חדשות ({newBlocks.reduce((s, b) => s + b.branches.length, 0)})
+                    </div>
+                    <div className="space-y-2">
+                      {groupBlocksByCity(newBlocks).map(group => (
+                        <div key={`new-${group.city}`} className="space-y-2">
+                          {group.blocks.length > 1 && (
+                            <CityGroupHandle city={group.city} blocks={group.blocks} dayDate={day.date} />
+                          )}
+                          {group.blocks.map(block => (
+                            <BlockCard
+                              key={block.id}
+                              block={block}
+                              expanded={expandedBlockIds.has(block.id)}
+                              onToggle={() => onToggleBlock(block.id)}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-xs text-gray-400 py-4 italic">אין הצעות חדשות ליום זה</div>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );
@@ -365,6 +439,15 @@ export default function SchedulePage() {
       setLoading(false);
     }
   }
+
+  // Auto-load schedule on first mount AND whenever the week changes,
+  // so the manager always sees the right week's calendar without clicking.
+  useEffect(() => {
+    if (user && ['admin', 'manager'].includes(user.role)) {
+      handleSuggest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, startDate]);
 
   function findBlockLocation(blockId) {
     for (let i = 0; i < days.length; i++) {
@@ -491,6 +574,18 @@ export default function SchedulePage() {
         updated: result.updated ?? 0,
         message: result.message
       });
+      // Refresh the view: saved branches now appear as locked existing-WO blocks,
+      // so the user can keep planning the rest without losing context.
+      try {
+        const refreshed = await scheduleAPI.suggest({
+          startDate, daysCount: 5,
+          daysAhead: Number(daysAhead),
+          maxBranchesPerDay: Number(maxBranchesPerDay)
+        });
+        setDays(refreshed.days || []);
+        setOverflow(refreshed.overflow || []);
+        setSummary(refreshed.summary || null);
+      } catch { /* keep current view if refresh fails */ }
     } catch (err) {
       toast.error(err.message || 'שגיאה בשמירת המסלול');
     } finally {
@@ -521,6 +616,43 @@ export default function SchedulePage() {
             <p className="text-gray-500 mt-1 text-sm">חלוקה לפי עיר ואזור — גרור ערים בין ימים</p>
           </div>
         </div>
+
+        {/* Week navigator */}
+        <div className="flex items-center gap-1 bg-card border rounded-xl p-1">
+          <button
+            onClick={() => setStartDate(addDaysToISO(startDate, -7))}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+            aria-label="שבוע קודם"
+            title="שבוע קודם"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <div className="px-3 min-w-32 text-center">
+            <div className="text-sm font-semibold leading-tight">{weekLabel(startDate)}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {formatDateShort(startDate)} – {formatDateShort(addDaysToISO(startDate, 4))}
+            </div>
+          </div>
+          <button
+            onClick={() => setStartDate(addDaysToISO(startDate, 7))}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-muted disabled:opacity-50"
+            aria-label="שבוע הבא"
+            title="שבוע הבא"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          {startDate !== currentWeekSunday() && (
+            <button
+              onClick={() => setStartDate(currentWeekSunday())}
+              disabled={loading}
+              className="ms-1 px-2 py-1 text-[11px] font-medium rounded-md bg-primary/10 text-primary disabled:opacity-50"
+            >
+              היום
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -537,7 +669,7 @@ export default function SchedulePage() {
             style={{ borderColor: 'var(--color-primary)', color: 'var(--color-primary)' }}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            צור הצעה
+            יצירת יומן שבועי
           </button>
           <button
             onClick={handleSave}
@@ -669,7 +801,7 @@ export default function SchedulePage() {
           <div className="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: 'var(--color-primary-50)' }}>
             <Sparkles className="w-8 h-8" style={{ color: 'var(--color-primary)' }} />
           </div>
-          <p className="font-medium text-gray-800">לחצי "צור הצעה" כדי להתחיל</p>
+          <p className="font-medium text-gray-800">לחצי "יצירת יומן שבועי" כדי להתחיל</p>
           <p className="text-sm text-gray-500 mt-2">המערכת תקבץ את הסניפים לפי עיר ואזור</p>
         </div>
       )}

@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import CommandPalette, { CommandPaletteTrigger } from './CommandPalette';
+import TechnicianBottomNav from './TechnicianBottomNav';
 import useChat from '@/hooks/useChat';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -53,17 +54,24 @@ export default function LayoutShell({ children }) {
 
   const isLoginPage = pathname === '/login';
   const isAdminAnalytics = pathname?.startsWith('/admin');
+  const isTechnicianRoute = pathname?.startsWith('/technician');
   const isPublicPage = isLoginPage || isAdminAnalytics;
-  const shouldRedirectToHome = isLoginPage && !loading && user;
+  const isTechnician = user?.role === 'technician';
+  const shouldRedirectToHome = isLoginPage && !loading && user && !isTechnician;
+  const shouldRedirectTechToTasks = isLoginPage && !loading && isTechnician;
   const shouldRedirectToLogin = !isPublicPage && !loading && !user;
+  // Technicians cannot reach admin/manager routes
+  const shouldBounceTechToTasks = !loading && isTechnician && !isTechnicianRoute && !isPublicPage;
 
   useEffect(() => {
-    if (shouldRedirectToHome) {
+    if (shouldRedirectTechToTasks || shouldBounceTechToTasks) {
+      router.replace('/technician/tasks');
+    } else if (shouldRedirectToHome) {
       router.replace('/');
     } else if (shouldRedirectToLogin) {
       router.replace('/login');
     }
-  }, [shouldRedirectToHome, shouldRedirectToLogin, router]);
+  }, [shouldRedirectToHome, shouldRedirectTechToTasks, shouldBounceTechToTasks, shouldRedirectToLogin, router]);
 
   // Check for splash screen trigger
   useEffect(() => {
@@ -85,13 +93,28 @@ export default function LayoutShell({ children }) {
   };
 
   // Full-screen loading during initial auth check (skip for public pages)
-  if ((!isPublicPage && loading) || shouldRedirectToHome || shouldRedirectToLogin) {
+  if ((!isPublicPage && loading) || shouldRedirectToHome || shouldRedirectToLogin || shouldRedirectTechToTasks || shouldBounceTechToTasks) {
     return <ServerLoadingScreen />;
   }
 
   // Public pages (login, admin analytics) - no sidebar, full screen
   if (isPublicPage) {
     return <>{children}</>;
+  }
+
+  // Technician shell — no sidebar, mobile-first, bottom nav
+  if (isTechnician && isTechnicianRoute) {
+    return (
+      <>
+        {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+        <div className="min-h-screen bg-background">
+          <main className="max-w-md mx-auto px-3 pt-3 pb-24">
+            {children}
+          </main>
+        </div>
+        <TechnicianBottomNav />
+      </>
+    );
   }
 
   // Normal authenticated layout
