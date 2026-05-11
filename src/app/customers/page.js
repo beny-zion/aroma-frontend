@@ -92,6 +92,8 @@ export default function CustomersPage() {
   const { data: customerData, isLoading: customersLoading } = useSWR(`/customers?${customerParams.toString()}`);
   const customers = customerData?.data || [];
   const pagination = customerData?.pagination || null;
+  // Totals are computed across the full filtered set on the backend, not just this page.
+  const totals = customerData?.totals || null;
   const loading = customersLoading && !customerData;
 
   async function viewCustomerDetails(customerId) {
@@ -304,7 +306,10 @@ export default function CustomersPage() {
   // Filtering is now server-side
   const filteredCustomers = customers;
 
-  const totalMonthly = customers.reduce((sum, c) => sum + (c.monthlyPrice || 0), 0);
+  // Prefer the backend's full-set total; fall back to summing the page only if missing.
+  const totalMonthly = totals
+    ? (totals.deviceMonthlyRateSum || 0)
+    : customers.reduce((sum, c) => sum + (c.monthlyPrice || 0), 0);
 
   if (loading) {
     return (
@@ -323,7 +328,7 @@ export default function CustomersPage() {
         title="לקוחות"
         subtitle={`ניהול לקוחות משלמים · הכנסה חודשית ₪${totalMonthly.toLocaleString()}`}
         icon={Users}
-        count={customers.length}
+        count={pagination?.total ?? customers.length}
       >
         <div className="flex items-center rounded-md border bg-card p-0.5">
           <button
