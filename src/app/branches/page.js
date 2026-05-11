@@ -426,12 +426,15 @@ export default function BranchesPage() {
                         {branch.region && <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{branch.region}</div>}
                       </div>
 
-                      <div className="flex justify-between items-center text-sm pt-2" style={{ borderTop: '1px solid var(--color-border-light)' }}>
-                        <span style={{ color: 'var(--color-text-muted)' }}>
-                          מחזור ביקור: {branch.visitIntervalDays} יום
+                      <div className="flex justify-between items-center text-xs pt-2 gap-2" style={{ borderTop: '1px solid var(--color-border-light)' }}>
+                        <span className="text-[var(--text-soft)] font-tabular">
+                          {(branch.activeDeviceCount ?? 0)} מכשירים
+                          {branch.totalMonthlyRate > 0 && (
+                            <span className="text-[var(--brand)] font-medium"> · {branch.totalMonthlyRate.toLocaleString('he-IL')} ₪</span>
+                          )}
                         </span>
-                        <span className="action-btn action-btn-primary text-xs">
-                          <Eye size={14} />
+                        <span className="action-btn action-btn-primary">
+                          <Eye size={12} />
                           פרטים
                         </span>
                       </div>

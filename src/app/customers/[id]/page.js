@@ -231,9 +231,15 @@ export default function CustomerDetailPage() {
             <h1 className="text-lg md:text-xl font-bold tracking-tight text-[var(--text-strong)]">
               {customer.name}
             </h1>
-            <span className={`status-badge ${status.className} mt-0.5 inline-block`}>
-              {status.label}
-            </span>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className={`status-badge ${status.className}`}>{status.label}</span>
+              {customer.branches && (
+                <span className="text-[12px] text-[var(--text-soft)] font-tabular">
+                  · {customer.branches.length} סניפים
+                  · {customer.branches.reduce((s, b) => s + (b.activeDeviceCount || 0), 0)} מכשירים פעילים
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <Button onClick={openEdit} variant="outline" size="sm">
@@ -367,11 +373,18 @@ export default function CustomerDetailPage() {
                   )}
                 </div>
 
-                <div className="flex justify-between items-center text-xs pt-2 border-t border-[var(--border-soft)]">
-                  <span className="text-[var(--text-muted)]">
-                    מחזור: {branch.visitIntervalDays || 30} יום
-                  </span>
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-[var(--border-soft)] gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[var(--text-muted)] shrink-0">
+                      {branch.activeDeviceCount ?? branch.deviceCount ?? 0} מכשירים
+                    </span>
+                    {branch.totalMonthlyRate > 0 && (
+                      <span className="text-[var(--brand)] font-tabular font-medium truncate">
+                        · {branch.totalMonthlyRate.toLocaleString('he-IL')} ₪/חודש
+                      </span>
+                    )}
+                  </div>
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-medium shrink-0 ${
                     branch.isActive ? 'text-[var(--status-green-text)]' : 'text-[var(--text-muted)]'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${
@@ -603,7 +616,10 @@ function DetailRow({ icon: Icon, label, value, highlight }) {
 
 function PaymentsPanel({ customer }) {
   const monthlyPrice = customer?.monthlyPrice || 0;
-  const annualEstimate = monthlyPrice * 12;
+  const computedFromDevices = customer?.computedMonthlyTotal || 0;
+  const totalMonthly = monthlyPrice + computedFromDevices;
+  const annualEstimate = totalMonthly * 12;
+  const totalDevices = (customer?.branches || []).reduce((s, b) => s + (b.activeDeviceCount || 0), 0);
 
   return (
     <div className="card">
@@ -618,12 +634,12 @@ function PaymentsPanel({ customer }) {
         </div>
       </div>
 
-      {/* Quick stats — derived from monthlyPrice for now */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
+      {/* Top stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
         <div className="rounded-md border border-[var(--border-default)] p-2.5">
-          <div className="text-[11px] text-[var(--text-soft)]">הכנסה חודשית קבועה</div>
-          <div className="text-base font-bold text-[var(--text-strong)] font-tabular mt-0.5">
-            {monthlyPrice.toLocaleString('he-IL')} ₪
+          <div className="text-[11px] text-[var(--text-soft)]">סה"כ חודשי</div>
+          <div className="text-base font-bold text-[var(--brand)] font-tabular mt-0.5">
+            {totalMonthly.toLocaleString('he-IL')} ₪
           </div>
         </div>
         <div className="rounded-md border border-[var(--border-default)] p-2.5">
@@ -632,14 +648,36 @@ function PaymentsPanel({ customer }) {
             {annualEstimate.toLocaleString('he-IL')} ₪
           </div>
         </div>
+        <div className="rounded-md border border-[var(--border-default)] p-2.5 col-span-2 md:col-span-1">
+          <div className="text-[11px] text-[var(--text-soft)]">מכשירים פעילים</div>
+          <div className="text-base font-bold text-[var(--text-strong)] font-tabular mt-0.5">
+            {totalDevices.toLocaleString('he-IL')}
+          </div>
+        </div>
       </div>
 
-      {/* Empty placeholder */}
-      <div className="rounded-md border border-dashed border-[var(--border-default)] p-4 text-center">
-        <Receipt className="w-5 h-5 mx-auto text-[var(--text-muted)] mb-1.5" />
-        <p className="text-[12.5px] font-medium text-[var(--text-default)]">היסטוריית תשלומים</p>
-        <p className="text-[11.5px] text-[var(--text-muted)] mt-0.5">
-          המודול יחובר למערכת חיוב חיצונית. כרגע ההכנסה החודשית מנוהלת ידנית בכרטיס הלקוח.
+      {/* Breakdown */}
+      <div className="rounded-md bg-[var(--surface-subtle)] p-3 mb-3 text-[12.5px] space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[var(--text-soft)]">תעריף חודשי קבוע (כרטיס לקוח)</span>
+          <span className="font-tabular text-[var(--text-default)]">{monthlyPrice.toLocaleString('he-IL')} ₪</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[var(--text-soft)]">סך תעריפי מכשירים פעילים</span>
+          <span className="font-tabular text-[var(--text-default)]">{computedFromDevices.toLocaleString('he-IL')} ₪</span>
+        </div>
+        <div className="flex items-center justify-between pt-1.5 border-t border-[var(--border-default)]">
+          <span className="font-medium text-[var(--text-strong)]">סך הכנסה חודשית</span>
+          <span className="font-tabular font-bold text-[var(--brand)]">{totalMonthly.toLocaleString('he-IL')} ₪</span>
+        </div>
+      </div>
+
+      {/* Future placeholder */}
+      <div className="rounded-md border border-dashed border-[var(--border-default)] p-3 text-center">
+        <Receipt className="w-4 h-4 mx-auto text-[var(--text-muted)] mb-1" />
+        <p className="text-[12px] font-medium text-[var(--text-default)]">היסטוריית תשלומים</p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+          המודול יחובר למערכת חיוב חיצונית בהמשך.
         </p>
       </div>
     </div>

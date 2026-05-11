@@ -103,7 +103,8 @@ export default function DeviceDetailPage() {
       scentId: device.scentId?._id || device.scentId || '',
       locationInBranch: device.locationInBranch || '',
       mlPerRefill: device.mlPerRefill || 100,
-      refillIntervalDays: device.refillIntervalDays || 30
+      refillIntervalDays: device.refillIntervalDays || 30,
+      monthlyRate: device.monthlyRate || 0
     });
     setEditOpen(true);
   }
@@ -130,7 +131,8 @@ export default function DeviceDetailPage() {
         scentId: editForm.scentId || null,
         locationInBranch: editForm.locationInBranch,
         mlPerRefill: parseInt(editForm.mlPerRefill) || 100,
-        refillIntervalDays: parseInt(editForm.refillIntervalDays) || 30
+        refillIntervalDays: parseInt(editForm.refillIntervalDays) || 30,
+        monthlyRate: Number(editForm.monthlyRate) || 0
       });
       await mutate(swrKey);
       invalidateDevices();
@@ -306,6 +308,15 @@ export default function DeviceDetailPage() {
             <div>
               <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>מרווח מילוי</span>
               <div className="font-medium">{device.refillIntervalDays || 30} ימים | {device.mlPerRefill || 100} מ"ל</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--color-bg)' }}>
+            <Wrench size={16} style={{ color: 'var(--color-primary)' }} />
+            <div>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>תעריף חודשי</span>
+              <div className="font-bold text-[var(--brand)] font-tabular">
+                {device.monthlyRate ? `${device.monthlyRate.toLocaleString('he-IL')} ₪` : '-'}
+              </div>
             </div>
           </div>
         </div>
@@ -507,6 +518,18 @@ export default function DeviceDetailPage() {
                     onChange={(e) => setEditForm({ ...editForm, refillIntervalDays: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="grid gap-1.5 max-w-[240px]">
+                <Label htmlFor="dev-rate">תעריף חודשי (₪)</Label>
+                <Input
+                  id="dev-rate"
+                  type="number"
+                  min="0"
+                  value={editForm.monthlyRate}
+                  onChange={(e) => setEditForm({ ...editForm, monthlyRate: e.target.value })}
+                  placeholder="0"
+                />
+                <p className="text-[11px] text-[var(--text-muted)]">תשלום חודשי שהלקוח משלם על המכשיר הזה.</p>
               </div>
             </div>
           )}

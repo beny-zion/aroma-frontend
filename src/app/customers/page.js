@@ -413,11 +413,31 @@ export default function CustomersPage() {
                 )}
               </div>
 
-              <div className="mt-3 pt-2 border-t border-[var(--border-soft)] flex justify-between items-center">
-                <span className="text-[var(--text-muted)] text-xs">מחיר חודשי</span>
-                <span className="text-base font-bold text-[var(--brand)] font-tabular">
-                  {(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪
-                </span>
+              <div className="mt-3 pt-2 border-t border-[var(--border-soft)] space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-[var(--text-soft)]">
+                  <span>מכשירים פעילים</span>
+                  <span className="font-tabular font-medium text-[var(--text-strong)]">
+                    {customer.activeDeviceCount ?? 0}
+                    {customer.deviceCount > customer.activeDeviceCount && (
+                      <span className="text-[var(--text-muted)]"> / {customer.deviceCount}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-[var(--text-soft)]">
+                  <span>סניפים</span>
+                  <span className="font-tabular font-medium text-[var(--text-strong)]">
+                    {customer.activeBranchCount ?? 0}
+                    {customer.branchCount > customer.activeBranchCount && (
+                      <span className="text-[var(--text-muted)]"> / {customer.branchCount}</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-[var(--border-soft)]">
+                  <span className="text-[var(--text-muted)] text-xs">חודשי</span>
+                  <span className="text-base font-bold text-[var(--brand)] font-tabular">
+                    {((customer.monthlyPrice || 0) + (customer.computedMonthlyTotal || 0)).toLocaleString('he-IL')} ₪
+                  </span>
+                </div>
               </div>
             </div>
           ))}
@@ -429,10 +449,11 @@ export default function CustomersPage() {
               <tr>
                 <th>שם</th>
                 <th>סטטוס</th>
+                <th>סניפים</th>
+                <th>מכשירים</th>
                 <th>טלפון</th>
                 <th>אימייל</th>
-                <th>ע.מ</th>
-                <th className="text-left">מחיר חודשי</th>
+                <th className="text-left">חודשי</th>
               </tr>
             </thead>
             <tbody>
@@ -455,11 +476,22 @@ export default function CustomersPage() {
                        customer.status === 'pending' ? 'בתהליך' : 'לא פעיל'}
                     </span>
                   </td>
+                  <td className="font-tabular text-[var(--text-default)]">
+                    {customer.activeBranchCount ?? 0}
+                    {customer.branchCount > customer.activeBranchCount && (
+                      <span className="text-[var(--text-muted)]"> / {customer.branchCount}</span>
+                    )}
+                  </td>
+                  <td className="font-tabular text-[var(--text-default)]">
+                    {customer.activeDeviceCount ?? 0}
+                    {customer.deviceCount > customer.activeDeviceCount && (
+                      <span className="text-[var(--text-muted)]"> / {customer.deviceCount}</span>
+                    )}
+                  </td>
                   <td className="text-[var(--text-soft)] font-tabular">{customer.billingDetails?.phone || '-'}</td>
                   <td className="text-[var(--text-soft)] truncate max-w-[200px]">{customer.billingDetails?.email || '-'}</td>
-                  <td className="text-[var(--text-soft)] font-tabular">{customer.billingDetails?.taxId || '-'}</td>
                   <td className="text-left font-bold text-[var(--brand)] font-tabular">
-                    {(customer.monthlyPrice || 0).toLocaleString('he-IL')} ₪
+                    {((customer.monthlyPrice || 0) + (customer.computedMonthlyTotal || 0)).toLocaleString('he-IL')} ₪
                   </td>
                 </tr>
               ))}

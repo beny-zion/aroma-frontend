@@ -112,7 +112,8 @@ export default function BranchDetailPage() {
       scentId: '',
       locationInBranch: '',
       mlPerRefill: 100,
-      refillIntervalDays: 30
+      refillIntervalDays: 30,
+      monthlyRate: 0
     });
     setDeviceOpen(true);
   }
@@ -125,7 +126,8 @@ export default function BranchDetailPage() {
       scentId: device.scentId?._id || device.scentId || '',
       locationInBranch: device.locationInBranch || '',
       mlPerRefill: device.mlPerRefill || 100,
-      refillIntervalDays: device.refillIntervalDays || 30
+      refillIntervalDays: device.refillIntervalDays || 30,
+      monthlyRate: device.monthlyRate || 0
     });
     setDeviceOpen(true);
   }
@@ -140,7 +142,8 @@ export default function BranchDetailPage() {
       scentId: deviceForm.scentId || null,
       locationInBranch: deviceForm.locationInBranch,
       mlPerRefill: parseInt(deviceForm.mlPerRefill) || 100,
-      refillIntervalDays: parseInt(deviceForm.refillIntervalDays) || 30
+      refillIntervalDays: parseInt(deviceForm.refillIntervalDays) || 30,
+      monthlyRate: Number(deviceForm.monthlyRate) || 0
     };
     try {
       setSavingDevice(true);
@@ -231,7 +234,14 @@ export default function BranchDetailPage() {
             <h1 className="text-lg md:text-xl font-bold tracking-tight text-[var(--text-strong)]">
               {branch.branchName}
             </h1>
-            <p className="text-[12.5px] text-[var(--text-soft)] mt-0.5">{customerName}</p>
+            <p className="text-[12.5px] text-[var(--text-soft)] mt-0.5">
+              {customerName}
+              {branch.devices && (
+                <span className="font-tabular">
+                  {' '}· {branch.devices.filter(d => d.isActive !== false).length} מכשירים פעילים
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -280,7 +290,7 @@ export default function BranchDetailPage() {
 
       {/* מכשירים בסניף */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Droplets className="w-4 h-4 text-[var(--brand)]" />
             <h2 className="text-sm font-semibold text-[var(--text-strong)]">
@@ -289,6 +299,17 @@ export default function BranchDetailPage() {
                 <span className="text-[var(--text-soft)] font-medium font-tabular"> ({branch.devices.length})</span>
               )}
             </h2>
+            {branch.devices && (() => {
+              const totalRate = branch.devices
+                .filter(d => d.isActive !== false)
+                .reduce((s, d) => s + (d.monthlyRate || 0), 0);
+              if (totalRate <= 0) return null;
+              return (
+                <span className="text-[12px] text-[var(--text-soft)]">
+                  · סך תעריפים: <span className="font-tabular font-bold text-[var(--brand)]">{totalRate.toLocaleString('he-IL')} ₪/חודש</span>
+                </span>
+              );
+            })()}
           </div>
           <Button onClick={openAddDevice} variant="outline" size="sm">
             <Plus className="w-4 h-4" />
@@ -307,6 +328,7 @@ export default function BranchDetailPage() {
                     <th>סוג</th>
                     <th>מיקום</th>
                     <th>ריח</th>
+                    <th>תעריף</th>
                     <th>מילוי אחרון</th>
                     <th>ימים מאז מילוי</th>
                     <th>פעולות</th>
@@ -328,6 +350,9 @@ export default function BranchDetailPage() {
                         </td>
                         <td>{device.locationInBranch || '-'}</td>
                         <td>{device.scentId?.name || '-'}</td>
+                        <td className="font-tabular text-[var(--text-soft)]">
+                          {device.monthlyRate ? `${device.monthlyRate.toLocaleString('he-IL')} ₪` : '-'}
+                        </td>
                         <td>{formatDate(device.lastRefillDate)}</td>
                         <td>
                           {daysSince !== null ? (
@@ -345,22 +370,30 @@ export default function BranchDetailPage() {
                             <a
                               href={`/devices/${device._id}`}
                               className="action-btn action-btn-primary"
+                              title="פרטי מכשיר"
                             >
                               <Eye size={12} />
                               פרטים
                             </a>
+                            <button
+                              onClick={() => openEditDevice(device)}
+                              className="action-btn action-btn-edit"
+                              title="ערוך מכשיר"
+                            >
+                              <Edit3 size={12} />
+                              ערוך
+                            </button>
                             <a
                               href={`/refill?device=${device._id}`}
-                              className="action-btn action-btn-edit"
+                              className="action-btn action-btn-warning"
+                              title="מילוי"
                             >
                               <Droplets size={12} />
                               מילוי
                             </a>
                             <DeviceMenu
                               device={device}
-                              onEdit={() => openEditDevice(device)}
                               onToggle={() => toggleDeviceActive(device)}
-                              onView={() => router.push(`/devices/${device._id}`)}
                             />
                           </div>
                         </td>
@@ -391,11 +424,16 @@ export default function BranchDetailPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <StatusBadge status={device.refillStatus} />
+                        <button
+                          onClick={() => openEditDevice(device)}
+                          className="action-btn action-btn-edit"
+                          title="ערוך"
+                        >
+                          <Edit3 size={12} />
+                        </button>
                         <DeviceMenu
                           device={device}
-                          onEdit={() => openEditDevice(device)}
                           onToggle={() => toggleDeviceActive(device)}
-                          onView={() => router.push(`/devices/${device._id}`)}
                         />
                       </div>
                     </div>
@@ -403,6 +441,9 @@ export default function BranchDetailPage() {
                     <div className="text-[12.5px] space-y-0.5 mb-2 text-[var(--text-soft)]">
                       <div>ריח: {device.scentId?.name || '-'}</div>
                       <div>מילוי אחרון: {formatDate(device.lastRefillDate)}</div>
+                      {device.monthlyRate > 0 && (
+                        <div>תעריף: <span className="font-tabular font-medium text-[var(--brand)]">{device.monthlyRate.toLocaleString('he-IL')} ₪</span></div>
+                      )}
                     </div>
 
                     {daysSince !== null && (
@@ -620,6 +661,18 @@ export default function BranchDetailPage() {
                   />
                 </div>
               </div>
+              <div className="grid gap-1.5 max-w-[240px]">
+                <Label htmlFor="dv-rate">תעריף חודשי (₪)</Label>
+                <Input
+                  id="dv-rate"
+                  type="number"
+                  min="0"
+                  value={deviceForm.monthlyRate}
+                  onChange={(e) => setDeviceForm({ ...deviceForm, monthlyRate: e.target.value })}
+                  placeholder="0"
+                />
+                <p className="text-[11px] text-[var(--text-muted)]">תשלום חודשי שהלקוח משלם על המכשיר הזה.</p>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -644,27 +697,18 @@ function DetailRow({ icon: Icon, label, value }) {
   );
 }
 
-function DeviceMenu({ device, onEdit, onToggle, onView }) {
+function DeviceMenu({ device, onToggle }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           className="h-7 w-7 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-strong)]"
-          aria-label="פעולות"
+          aria-label="עוד פעולות"
         >
           <MoreVertical className="w-4 h-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
-        <DropdownMenuItem onClick={onView}>
-          <Eye className="w-4 h-4" />
-          פרטי מכשיר
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onEdit}>
-          <Edit3 className="w-4 h-4" />
-          ערוך
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onToggle}>
           {device.isActive ? (
             <>
