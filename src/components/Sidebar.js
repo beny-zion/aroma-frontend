@@ -38,6 +38,7 @@ const menuSections = [
       { href: '/refill', label: 'מילוי מהיר', icon: PlusCircle, accent: true },
       { href: '/service-logs', label: 'יומן שירות', icon: FileText },
       { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager', 'secretary'] },
+      { href: '/schedule', label: 'לוח שבועי', icon: CalendarDays, roles: ['admin', 'manager', 'secretary'] },
       { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
     ]
   },

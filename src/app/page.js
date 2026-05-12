@@ -11,6 +11,7 @@ import RefillStatusChart from '@/components/dashboard/RefillStatusChart';
 import GeoDistributionChart from '@/components/dashboard/GeoDistributionChart';
 import InventoryIntelligence from '@/components/dashboard/InventoryIntelligence';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
+import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget';
 
 export default function Dashboard() {
   const { data: dashboardData, isLoading: loading, error: swrError, refresh } = useDashboardStats();
@@ -113,6 +114,12 @@ export default function Dashboard() {
           icon="alerts"
           color={kpis?.openServiceCalls > 0 ? 'amber' : 'green'}
         />
+      </section>
+
+      {/* Today's Tasks */}
+      <section>
+        <SectionHeader title="משימות היום" />
+        <TodayTasksWidget />
       </section>
 
       {/* Operational Health */}
