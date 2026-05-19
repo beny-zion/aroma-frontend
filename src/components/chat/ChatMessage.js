@@ -4,7 +4,7 @@ import ChatEntityLink from './ChatEntityLink';
 
 // Combined regex matches both entity links (24-char hex id) and page links (path).
 // Capture groups: 1=type, 2=id-or-path, 3=displayName
-const LINK_REGEX = /\[\[(customer|branch|device|work-order|scent|technician|user):([a-f0-9]{24}):([^\]]+)\]\]|\[\[(page):(\/[a-zA-Z0-9\/_\-]*):([^\]]+)\]\]/g;
+const LINK_REGEX = /\[\[(customer|branch|device|work-order|scent|technician|user|service-request):([a-f0-9]{24}):([^\]]+)\]\]|\[\[(page):(\/[a-zA-Z0-9\/_\-]*):([^\]]+)\]\]/g;
 
 function parseMessageContent(content, onNavigate) {
   if (!content) return null;

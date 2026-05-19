@@ -11,6 +11,7 @@ const ENTITY_ROUTES = {
   'scent': () => `/scents`,
   'technician': () => `/users`,
   'user': () => `/users`,
+  'service-request': () => `/service-requests`,
   // Internal app pages — entityId is the path itself (e.g. "/schedule")
   'page': (path) => path || '/'
 };

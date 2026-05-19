@@ -29,9 +29,11 @@ export default function ChatMessageList({ messages, isSending, onNavigate }) {
         </p>
         <div className="mt-6 space-y-2 w-full max-w-[280px]">
           {[
-            'מה המצב הכללי של המערכת?',
-            'אילו מכשירים דורשים מילוי דחוף?',
-            'תן סקירת תחזוקה לתל אביב'
+            'אילו תקלות חורגות מ-SLA?',
+            'מה משובץ למחר?',
+            'מי הטכנאי הכי עמוס היום?',
+            'אילו מכשירים באדום עכשיו?',
+            'מה ההכנסה החודשית הכוללת?'
           ].map((suggestion, i) => (
             <button
               key={i}
