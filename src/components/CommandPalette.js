@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/command';
 import {
   Building2, Users, Cpu, Droplets, ClipboardList, CalendarDays,
-  LayoutDashboard, FileText, UserCog, PlusCircle, Settings
+  LayoutDashboard, FileText, UserCog, PlusCircle, Settings, Wrench
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/scents', label: 'ריחות', icon: Droplets, keywords: ['scents', 'inventory'] },
   { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, keywords: ['work', 'orders'], roles: ['admin', 'manager', 'secretary'] },
   { href: '/schedule', label: 'הזמנות עבודה — לוח שבועי', icon: CalendarDays, keywords: ['schedule', 'route', 'weekly'], roles: ['admin', 'manager', 'secretary'] },
+  { href: '/service-requests', label: 'פניות שירות', icon: Wrench, keywords: ['service', 'requests', 'complaints', 'תלונות', 'תקלות'], roles: ['admin', 'manager', 'secretary'] },
   { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, keywords: ['my', 'tasks'], roles: ['technician'] },
   { href: '/service-logs', label: 'יומן שירות', icon: FileText, keywords: ['service', 'logs'] },
   { href: '/refill', label: 'מילוי מהיר', icon: PlusCircle, keywords: ['refill', 'quick'] },

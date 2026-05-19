@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import {
   LayoutDashboard, Cpu, Users, Building2, Droplets,
   PlusCircle, FileText, ClipboardList, UserCog, Settings,
-  LogOut, Menu, CalendarDays, History
+  LogOut, Menu, CalendarDays, History, Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,7 @@ const menuSections = [
       { href: '/service-logs', label: 'יומן שירות', icon: FileText },
       { href: '/work-orders', label: 'הזמנות עבודה', icon: ClipboardList, roles: ['admin', 'manager', 'secretary'] },
       { href: '/schedule', label: 'לוח שבועי', icon: CalendarDays, roles: ['admin', 'manager', 'secretary'] },
+      { href: '/service-requests', label: 'פניות שירות', icon: Wrench, roles: ['admin', 'manager', 'secretary'] },
       { href: '/my-tasks', label: 'המשימות שלי', icon: ClipboardList, roles: ['technician'] },
     ]
   },

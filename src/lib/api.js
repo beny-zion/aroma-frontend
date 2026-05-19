@@ -200,6 +200,19 @@ export const permissionsAPI = {
   get: () => fetchAPI('/permissions'),
 };
 
+// ========== Service Requests (פניות שירות) ==========
+export const serviceRequestsAPI = {
+  list: (params = {}) => {
+    const cleaned = Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null && v !== ''));
+    const query = new URLSearchParams(cleaned).toString();
+    return fetchAPI(`/service-requests${query ? `?${query}` : ''}`);
+  },
+  create: (data) => fetchAPI('/service-requests', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => fetchAPI(`/service-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  schedule: (id, data = {}) => fetchAPI(`/service-requests/${id}/schedule`, { method: 'POST', body: JSON.stringify(data) }),
+  delete: (id) => fetchAPI(`/service-requests/${id}`, { method: 'DELETE' }),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {
