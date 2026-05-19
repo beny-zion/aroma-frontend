@@ -19,6 +19,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
+import BranchCombobox from '@/components/BranchCombobox';
 import {
   AlertTriangle, Wrench, Plus, Building2, Phone, Calendar, CheckCircle2,
   Loader2, X, Clock, ChevronLeft
@@ -329,16 +330,11 @@ export default function ServiceRequestsPage() {
           <div className="grid gap-3">
             <div>
               <Label className="text-xs">סניף *</Label>
-              <Select value={form.branchId} onValueChange={v => setForm({ ...form, branchId: v })}>
-                <SelectTrigger><SelectValue placeholder="בחר סניף" /></SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {branches.map(b => (
-                    <SelectItem key={b._id} value={b._id}>
-                      {b.branchName} {b.city ? `· ${b.city}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BranchCombobox
+                branches={branches}
+                value={form.branchId}
+                onChange={(id) => setForm({ ...form, branchId: id })}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
