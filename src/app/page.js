@@ -12,6 +12,7 @@ import GeoDistributionChart from '@/components/dashboard/GeoDistributionChart';
 import InventoryIntelligence from '@/components/dashboard/InventoryIntelligence';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
 import TodayTasksWidget from '@/components/dashboard/TodayTasksWidget';
+import TechnicianQueueWidget from '@/components/dashboard/TechnicianQueueWidget';
 
 export default function Dashboard() {
   const { data: dashboardData, isLoading: loading, error: swrError, refresh } = useDashboardStats();
@@ -116,10 +117,16 @@ export default function Dashboard() {
         />
       </section>
 
-      {/* Today's Tasks */}
-      <section>
-        <SectionHeader title="משימות היום" />
-        <TodayTasksWidget />
+      {/* Today's Tasks + Technician Queue */}
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <div>
+          <SectionHeader title="משימות היום" />
+          <TodayTasksWidget />
+        </div>
+        <div>
+          <SectionHeader title="עומס צוות השטח" />
+          <TechnicianQueueWidget />
+        </div>
       </section>
 
       {/* Operational Health */}

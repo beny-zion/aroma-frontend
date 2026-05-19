@@ -2,7 +2,9 @@
 
 import ChatEntityLink from './ChatEntityLink';
 
-const ENTITY_LINK_REGEX = /\[\[(customer|branch|device|work-order|scent):([a-f0-9]{24}):([^\]]+)\]\]/g;
+// Combined regex matches both entity links (24-char hex id) and page links (path).
+// Capture groups: 1=type, 2=id-or-path, 3=displayName
+const LINK_REGEX = /\[\[(customer|branch|device|work-order|scent|technician|user):([a-f0-9]{24}):([^\]]+)\]\]|\[\[(page):(\/[a-zA-Z0-9\/_\-]*):([^\]]+)\]\]/g;
 
 function parseMessageContent(content, onNavigate) {
   if (!content) return null;
@@ -10,10 +12,10 @@ function parseMessageContent(content, onNavigate) {
   const parts = [];
   let lastIndex = 0;
   let match;
-  const regex = new RegExp(ENTITY_LINK_REGEX.source, ENTITY_LINK_REGEX.flags);
+  const regex = new RegExp(LINK_REGEX.source, LINK_REGEX.flags);
 
   while ((match = regex.exec(content)) !== null) {
-    // Add text before the match
+    // Text before the match
     if (match.index > lastIndex) {
       parts.push(
         <span key={`text-${lastIndex}`}>
@@ -22,13 +24,17 @@ function parseMessageContent(content, onNavigate) {
       );
     }
 
-    // Add entity link
+    // Either entity-style (groups 1-3) or page-style (groups 4-6) matched
+    const type = match[1] || match[4];
+    const entityId = match[2] || match[5];
+    const displayName = match[3] || match[6];
+
     parts.push(
       <ChatEntityLink
         key={`link-${match.index}`}
-        type={match[1]}
-        entityId={match[2]}
-        displayName={match[3]}
+        type={type}
+        entityId={entityId}
+        displayName={displayName}
         onNavigate={onNavigate}
       />
     );
@@ -36,7 +42,6 @@ function parseMessageContent(content, onNavigate) {
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text
   if (lastIndex < content.length) {
     parts.push(
       <span key={`text-${lastIndex}`}>

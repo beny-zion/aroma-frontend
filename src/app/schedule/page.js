@@ -7,6 +7,7 @@ import { scheduleAPI } from '@/lib/api';
 import { useTechnicians, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import WorkOrdersTabs from '@/components/WorkOrdersTabs';
+import CalendarView from '@/components/schedule/CalendarView';
 import {
   DndContext,
   MouseSensor,
@@ -505,6 +506,7 @@ export default function SchedulePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [expandedBlockIds, setExpandedBlockIds] = useState(new Set());
   const [savedSummary, setSavedSummary] = useState(null); // { count } after save
+  const [viewMode, setViewMode] = useState('planner'); // 'planner' | 'calendar'
 
   const sensors = useSensors(
     // Desktop: drag starts after 5px movement (snappy)
@@ -732,6 +734,35 @@ export default function SchedulePage() {
   return (
     <div className="space-y-4">
       <WorkOrdersTabs />
+
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-card border rounded-xl p-1 w-fit">
+        <button
+          onClick={() => setViewMode('planner')}
+          className={`px-3 py-1.5 text-[12px] rounded-md transition ${
+            viewMode === 'planner'
+              ? 'bg-[var(--brand)] text-white font-medium'
+              : 'text-[var(--text-soft)] hover:bg-[var(--surface-muted)]'
+          }`}
+        >
+          תכנון שבועי
+        </button>
+        <button
+          onClick={() => setViewMode('calendar')}
+          className={`px-3 py-1.5 text-[12px] rounded-md transition ${
+            viewMode === 'calendar'
+              ? 'bg-[var(--brand)] text-white font-medium'
+              : 'text-[var(--text-soft)] hover:bg-[var(--surface-muted)]'
+          }`}
+        >
+          תצוגת לוח שנה
+        </button>
+      </div>
+
+      {viewMode === 'calendar' && <CalendarView />}
+
+      {viewMode === 'planner' && (
+        <>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
@@ -998,6 +1029,8 @@ export default function SchedulePage() {
             })}
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -26,7 +26,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Users, Phone, Mail, Building2, CreditCard, MapPin,
   ArrowRight, Edit3, Eye, Loader2, Plus, MoreVertical, Pause, Play, Trash2,
-  Receipt, Sparkles
+  Receipt, Sparkles, TrendingUp, Activity, AlertTriangle, CheckCircle2, HelpCircle
 } from 'lucide-react';
 
 const statusConfig = {
@@ -39,7 +39,9 @@ export default function CustomerDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const swrKey = id ? `/customers/${id}` : null;
+  const summaryKey = id ? `/customers/${id}/summary` : null;
   const { data: customer, error, isLoading } = useSWR(swrKey);
+  const { data: summary } = useSWR(summaryKey);
   const { invalidateCustomers, invalidateBranches } = useInvalidate();
 
   const [editOpen, setEditOpen] = useState(false);
@@ -249,6 +251,106 @@ export default function CustomerDetailPage() {
           ערוך פרטים
         </Button>
       </div>
+
+      {summary && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* כרטיס הכנסה צפויה */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-sm flex items-center gap-2 text-[var(--text-strong)]">
+                <TrendingUp className="w-4 h-4 text-[var(--brand)]" />
+                הכנסה צפויה
+              </h2>
+              <span className="text-[11px] text-[var(--text-muted)]">MRR חוזה</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <div className="text-[11px] text-[var(--text-soft)] mb-1">חוזה חודשי</div>
+                <div className="text-base font-bold text-[var(--text-strong)] font-tabular">
+                  {(summary.billing.monthlyPrice || 0).toLocaleString('he-IL')} ₪
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] text-[var(--text-soft)] mb-1">מכשירים</div>
+                <div className="text-base font-bold text-[var(--text-strong)] font-tabular">
+                  {(summary.billing.deviceMonthlyTotal || 0).toLocaleString('he-IL')} ₪
+                </div>
+              </div>
+              <div className="border-r border-[var(--border-soft)] pr-3">
+                <div className="text-[11px] text-[var(--text-soft)] mb-1">סה"כ חודשי</div>
+                <div className="text-base font-bold text-[var(--brand)] font-tabular">
+                  {(summary.billing.totalMonthlyRevenue || 0).toLocaleString('he-IL')} ₪
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-[var(--border-soft)] flex items-center justify-between text-[12px]">
+              <span className="text-[var(--text-soft)]">צפי שנתי</span>
+              <span className="font-semibold text-[var(--text-strong)] font-tabular">
+                {(summary.billing.projectedAnnual || 0).toLocaleString('he-IL')} ₪
+              </span>
+            </div>
+          </div>
+
+          {/* כרטיס סטטוס מכשירים */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-sm flex items-center gap-2 text-[var(--text-strong)]">
+                <Activity className="w-4 h-4 text-[var(--brand)]" />
+                סטטוס מכשירים
+              </h2>
+              <span className="text-[11px] text-[var(--text-muted)]">
+                {summary.devices.active} מכשירים פעילים
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-md p-2 bg-[#F0FDF4] border border-[#86EFAC]/40">
+                <div className="flex items-center gap-1 text-[10px] text-[#166534] mb-0.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  תקין
+                </div>
+                <div className="text-lg font-bold text-[#166534] font-tabular">
+                  {summary.devices.statusBreakdown.green}
+                </div>
+              </div>
+              <div className="rounded-md p-2 bg-[#FFFBEB] border border-[#FCD34D]/40">
+                <div className="flex items-center gap-1 text-[10px] text-[#92400E] mb-0.5">
+                  <Activity className="w-3 h-3" />
+                  קרוב
+                </div>
+                <div className="text-lg font-bold text-[#92400E] font-tabular">
+                  {summary.devices.statusBreakdown.yellow}
+                </div>
+              </div>
+              <div className="rounded-md p-2 bg-[#FEF2F2] border border-[#FCA5A5]/40">
+                <div className="flex items-center gap-1 text-[10px] text-[#991B1B] mb-0.5">
+                  <AlertTriangle className="w-3 h-3" />
+                  דחוף
+                </div>
+                <div className="text-lg font-bold text-[#991B1B] font-tabular">
+                  {summary.devices.statusBreakdown.red}
+                </div>
+              </div>
+              <div className="rounded-md p-2 bg-[var(--surface-muted)] border border-[var(--border-soft)]">
+                <div className="flex items-center gap-1 text-[10px] text-[var(--text-soft)] mb-0.5">
+                  <HelpCircle className="w-3 h-3" />
+                  לא ידוע
+                </div>
+                <div className="text-lg font-bold text-[var(--text-soft)] font-tabular">
+                  {summary.devices.statusBreakdown.unknown}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-[var(--border-soft)] flex items-center justify-between text-[12px]">
+              <span className="text-[var(--text-soft)]">
+                {summary.workOrders.counts.pending + summary.workOrders.counts.assigned + summary.workOrders.counts.in_progress} משימות פתוחות
+              </span>
+              <span className="font-semibold text-[var(--text-strong)] font-tabular">
+                {summary.serviceLogs.totalThisMonth} ביקורים החודש
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Tabs defaultValue="details" className="w-full" dir="rtl">
         <TabsList className="bg-transparent border-b w-full justify-start rounded-none h-auto p-0 gap-1 overflow-x-auto flex-nowrap scrollbar-hide">

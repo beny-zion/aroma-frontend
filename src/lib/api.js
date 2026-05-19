@@ -65,6 +65,7 @@ export const workOrdersAPI = {
     const query = new URLSearchParams(params).toString();
     return fetchAPI(`/work-orders/my${query ? `?${query}` : ''}`);
   },
+  getQueueByTechnician: () => fetchAPI('/work-orders/queue-by-technician'),
   getById: (id) => fetchAPI(`/work-orders/${id}`),
   create: (data) => fetchAPI('/work-orders', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => fetchAPI(`/work-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -79,6 +80,7 @@ export const customersAPI = {
     return fetchAPI(`/customers${query ? `?${query}` : ''}`);
   },
   getById: (id) => fetchAPI(`/customers/${id}`),
+  getSummary: (id) => fetchAPI(`/customers/${id}/summary`),
   create: (data) => fetchAPI('/customers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => fetchAPI(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id) => fetchAPI(`/customers/${id}`, { method: 'DELETE' }),
@@ -184,6 +186,18 @@ export const analyticsAPI = {
 export const scheduleAPI = {
   suggest: (data) => fetchAPI('/schedule/suggest', { method: 'POST', body: JSON.stringify(data) }),
   save: (data) => fetchAPI('/schedule/save', { method: 'POST', body: JSON.stringify(data) }),
+  getCalendar: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/schedule/calendar${query ? `?${query}` : ''}`);
+  },
+};
+
+// ========== Reports ==========
+export const reportsAPI = {
+  getRevenue: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/reports/revenue${query ? `?${query}` : ''}`);
+  },
 };
 
 // ========== Audit Log ==========
