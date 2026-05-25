@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import CommandPalette, { CommandPaletteTrigger } from './CommandPalette';
 import TechnicianBottomNav from './TechnicianBottomNav';
+import TechMessageFAB from './TechMessageFAB';
+import NotificationsBell from './NotificationsBell';
 import ReadySystemsCredit from './ReadySystemsCredit';
 import useChat from '@/hooks/useChat';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -126,6 +128,7 @@ export default function LayoutShell({ children }) {
             {children}
           </main>
         </div>
+        <TechMessageFAB />
         <TechnicianBottomNav />
       </>
     );
@@ -141,7 +144,9 @@ export default function LayoutShell({ children }) {
           {/* Top header bar */}
           <div className="hidden md:flex items-center justify-between gap-2 px-6 py-2 border-b bg-card/80 backdrop-blur sticky top-0 z-30">
             <CommandPaletteTrigger onClick={() => setPaletteOpen(true)} />
-            <DropdownMenu>
+            <div className="flex items-center gap-1">
+              {['admin', 'manager', 'secretary'].includes(user?.role) && <NotificationsBell />}
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 h-9">
                   <div className="text-left leading-tight">
@@ -163,6 +168,7 @@ export default function LayoutShell({ children }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
 
           {/* Page content */}

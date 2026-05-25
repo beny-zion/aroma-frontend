@@ -239,6 +239,23 @@ export const guidesAPI = {
   delete: (slug) => fetchAPI(`/guides/${slug}`, { method: 'DELETE' }),
 };
 
+// ========== Tech Messages (notifications from technicians to the office) ==========
+export const techMessagesAPI = {
+  list: (params = {}) => {
+    const cleaned = Object.fromEntries(Object.entries(params).filter(([_, v]) => v != null && v !== ''));
+    const query = new URLSearchParams(cleaned).toString();
+    return fetchAPI(`/tech-messages${query ? `?${query}` : ''}`);
+  },
+  unreadCount: () => fetchAPI('/tech-messages/unread-count'),
+  send: (data) => fetchAPI('/tech-messages', { method: 'POST', body: JSON.stringify(data) }),
+  markRead: (id) => fetchAPI(`/tech-messages/${id}/read`, { method: 'PATCH' }),
+  resolve: (id, replyBody) => fetchAPI(`/tech-messages/${id}/resolve`, {
+    method: 'PATCH',
+    body: JSON.stringify({ replyBody })
+  }),
+  delete: (id) => fetchAPI(`/tech-messages/${id}`, { method: 'DELETE' }),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {
