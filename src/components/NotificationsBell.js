@@ -60,10 +60,13 @@ export default function NotificationsBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="התראות">
-          <Bell className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="relative h-11 w-11" aria-label="התראות">
+          <Bell className="!h-6 !w-6" />
           {unread > 0 && (
-            <span className="absolute top-1 left-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+            // Sit on the top-left corner of the button so it doesn't cover the bell.
+            // In RTL the visual upper-left of the bell is the screen's upper-left,
+            // so absolute positioning still reads correctly.
+            <span className="absolute -top-0.5 -left-0.5 min-w-[20px] h-5 px-1.5 rounded-full bg-red-600 text-white text-[11px] font-bold leading-none flex items-center justify-center ring-2 ring-card">
               {unread > 99 ? '99+' : unread}
             </span>
           )}
