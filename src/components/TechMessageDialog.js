@@ -148,10 +148,15 @@ export default function TechMessageDialog({ open, onOpenChange, onSent }) {
                       <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start" dir="rtl">
+                  <PopoverContent
+                    className="p-0 w-[calc(100vw-2rem)] max-w-[420px] sm:w-[--radix-popover-trigger-width]"
+                    align="start"
+                    dir="rtl"
+                    sideOffset={4}
+                  >
                     <Command filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
-                      <CommandInput placeholder="חיפוש..." />
-                      <CommandList>
+                      <CommandInput placeholder="חיפוש..." className="h-11 text-base" />
+                      <CommandList className="max-h-[60vh]">
                         <CommandEmpty>אין תוצאות</CommandEmpty>
                         <CommandGroup>
                           {items.map(item => (
@@ -159,12 +164,13 @@ export default function TechMessageDialog({ open, onOpenChange, onSent }) {
                               key={item.id}
                               value={item.haystack}
                               onSelect={() => { setEntityId(item.id); setPickerOpen(false); }}
+                              className="flex items-start gap-2 py-3 cursor-pointer"
                             >
-                              <Check className={cn('h-4 w-4 mt-0.5 shrink-0', entityId === item.id ? 'opacity-100' : 'opacity-0')} />
+                              <Check className={cn('h-4 w-4 mt-1 shrink-0', entityId === item.id ? 'opacity-100' : 'opacity-0')} />
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium truncate">{item.title}</div>
                                 {item.subtitle && (
-                                  <div className="text-[11px] text-muted-foreground truncate">{item.subtitle}</div>
+                                  <div className="text-xs text-muted-foreground truncate">{item.subtitle}</div>
                                 )}
                               </div>
                             </CommandItem>

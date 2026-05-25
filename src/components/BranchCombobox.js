@@ -62,9 +62,12 @@ export default function BranchCombobox({ branches = [], value, onChange, placeho
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0 w-[--radix-popover-trigger-width]"
+        // On mobile (< sm): use most of the viewport so the search list isn't
+        // cramped inside a dialog. On desktop: align to trigger width.
+        className="p-0 w-[calc(100vw-2rem)] max-w-[420px] sm:w-[--radix-popover-trigger-width]"
         align="start"
         dir="rtl"
+        sideOffset={4}
       >
         <Command
           // Use our combined haystack as the searchable value, so a single
@@ -73,8 +76,8 @@ export default function BranchCombobox({ branches = [], value, onChange, placeho
             return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
           }}
         >
-          <CommandInput placeholder="חיפוש לפי שם, עיר או לקוח..." />
-          <CommandList>
+          <CommandInput placeholder="חיפוש לפי שם, עיר או לקוח..." className="h-11 text-base" />
+          <CommandList className="max-h-[60vh]">
             <CommandEmpty>לא נמצאו סניפים</CommandEmpty>
             <CommandGroup>
               {items.map(item => (
@@ -85,17 +88,17 @@ export default function BranchCombobox({ branches = [], value, onChange, placeho
                     onChange(item.id);
                     setOpen(false);
                   }}
-                  className="flex items-start gap-2"
+                  className="flex items-start gap-2 py-3 cursor-pointer"
                 >
                   <Check
                     className={cn(
-                      'h-4 w-4 mt-0.5 shrink-0',
+                      'h-4 w-4 mt-1 shrink-0',
                       value === item.id ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{item.branchName}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {[item.city, item.region, item.customerName].filter(Boolean).join(' · ')}
                     </div>
                   </div>
