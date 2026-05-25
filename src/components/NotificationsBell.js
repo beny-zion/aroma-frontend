@@ -170,6 +170,17 @@ export default function NotificationsBell() {
             </ul>
           )}
         </div>
+
+        {/* Footer link to full inbox */}
+        <div className="border-t">
+          <Link
+            href="/tech-messages"
+            onClick={() => setOpen(false)}
+            className="block text-center text-sm text-primary font-medium py-3 hover:bg-muted/30 rounded-b-md"
+          >
+            הצג את כל ההודעות →
+          </Link>
+        </div>
       </PopoverContent>
     </Popover>
   );
