@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Cpu, Users, Building2, Droplets,
   PlusCircle, FileText, ClipboardList, UserCog, Settings,
   LogOut, Menu, CalendarDays, History, Wrench, TrendingUp, BookOpen,
-  MessageCircle
+  MessageCircle, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,6 +62,17 @@ const menuSections = [
   }
 ];
 
+// Default open/closed state per section (admins keep ראשי + תפעול open).
+// Sections containing the current path are force-expanded regardless.
+const DEFAULT_OPEN = {
+  'ראשי': true,
+  'תפעול': true,
+  'דוחות': false,
+  'מערכת': false
+};
+
+const STORAGE_KEY = 'aroma_sidebar_sections';
+
 function NavList({ user, pathname, onNavigate }) {
   const visibleSections = menuSections
     .map(section => ({
@@ -70,40 +81,75 @@ function NavList({ user, pathname, onNavigate }) {
     }))
     .filter(section => section.items.length > 0);
 
+  // Persisted collapse state
+  const [openMap, setOpenMap] = useState(() => {
+    if (typeof window === 'undefined') return DEFAULT_OPEN;
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      return saved && typeof saved === 'object' ? { ...DEFAULT_OPEN, ...saved } : DEFAULT_OPEN;
+    } catch { return DEFAULT_OPEN; }
+  });
+
+  function toggleSection(title) {
+    setOpenMap(prev => {
+      const next = { ...prev, [title]: !prev[title] };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  function isSectionOpen(section) {
+    // Force-open if any item in this section matches the current path
+    const containsActive = section.items.some(item => pathname === item.href);
+    if (containsActive) return true;
+    return openMap[section.title] ?? true;
+  }
+
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-      {visibleSections.map((section, sIdx) => (
-        <div key={sIdx}>
-          <div className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {section.title}
+    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+      {visibleSections.map((section, sIdx) => {
+        const open = isSectionOpen(section);
+        return (
+          <div key={sIdx}>
+            <button
+              type="button"
+              onClick={() => toggleSection(section.title)}
+              className="w-full flex items-center justify-between px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:bg-muted/40 hover:text-foreground transition-colors"
+              aria-expanded={open}
+            >
+              <span>{section.title}</span>
+              <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', !open && '-rotate-90')} />
+            </button>
+            {open && (
+              <ul className="space-y-0.5 mt-1">
+                {section.items.map(item => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors',
+                          isActive
+                            ? 'bg-primary text-primary-foreground font-medium'
+                            : item.accent
+                            ? 'text-primary hover:bg-accent'
+                            : 'text-foreground/80 hover:bg-accent hover:text-foreground'
+                        )}
+                      >
+                        <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'opacity-100' : 'opacity-70')} />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-          <ul className="space-y-0.5">
-            {section.items.map(item => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    className={cn(
-                      'flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground font-medium'
-                        : item.accent
-                        ? 'text-primary hover:bg-accent'
-                        : 'text-foreground/80 hover:bg-accent hover:text-foreground'
-                    )}
-                  >
-                    <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'opacity-100' : 'opacity-70')} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }
