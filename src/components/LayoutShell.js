@@ -61,6 +61,7 @@ export default function LayoutShell({ children }) {
   const isLoginPage = pathname === '/login';
   const isAdminAnalytics = pathname?.startsWith('/admin');
   const isTechnicianRoute = pathname?.startsWith('/technician');
+  const isGuidesRoute = pathname?.startsWith('/guides');
   const isPublicPage = isLoginPage || isAdminAnalytics;
   const isTechnician = user?.role === 'technician';
   const isSecretary = user?.role === 'secretary';
@@ -68,8 +69,8 @@ export default function LayoutShell({ children }) {
   const shouldRedirectTechToTasks = isLoginPage && !loading && isTechnician;
   const shouldRedirectSecretary = isLoginPage && !loading && isSecretary;
   const shouldRedirectToLogin = !isPublicPage && !loading && !user;
-  // Technicians cannot reach admin/manager routes
-  const shouldBounceTechToTasks = !loading && isTechnician && !isTechnicianRoute && !isPublicPage;
+  // Technicians cannot reach admin/manager routes (but /guides is allowed for everyone)
+  const shouldBounceTechToTasks = !loading && isTechnician && !isTechnicianRoute && !isGuidesRoute && !isPublicPage;
   // Secretary cannot reach the dashboard (profitability) — bounce to work-orders
   const shouldBounceSecretary =
     !loading && isSecretary && SECRETARY_BLOCKED_PATHS.includes(pathname);

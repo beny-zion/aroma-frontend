@@ -227,6 +227,18 @@ export const serviceRequestsAPI = {
   delete: (id) => fetchAPI(`/service-requests/${id}`, { method: 'DELETE' }),
 };
 
+// ========== Guides (in-app step-by-step usage docs) ==========
+export const guidesAPI = {
+  list: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetchAPI(`/guides${query ? `?${query}` : ''}`);
+  },
+  get: (slug) => fetchAPI(`/guides/${slug}`),
+  create: (data) => fetchAPI('/guides', { method: 'POST', body: JSON.stringify(data) }),
+  update: (slug, data) => fetchAPI(`/guides/${slug}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (slug) => fetchAPI(`/guides/${slug}`, { method: 'DELETE' }),
+};
+
 // ========== Device Types ==========
 export const deviceTypesAPI = {
   getAll: (params = {}) => {

@@ -1,8 +1,9 @@
 'use client';
 
 import useSWR from 'swr';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User as UserIcon, ClipboardList, Droplets, CheckCircle } from 'lucide-react';
+import { LogOut, User as UserIcon, ClipboardList, Droplets, CheckCircle, BookOpen, ChevronLeft } from 'lucide-react';
 import ReadySystemsCredit from '@/components/ReadySystemsCredit';
 
 export default function TechnicianProfilePage() {
@@ -74,6 +75,17 @@ export default function TechnicianProfilePage() {
           </div>
         </div>
       </div>
+
+      <Link
+        href="/guides"
+        className="w-full flex items-center justify-between gap-2 py-3 px-4 rounded-xl border bg-card hover:bg-accent transition-colors"
+      >
+        <span className="flex items-center gap-2 font-medium">
+          <BookOpen className="w-4 h-4 text-primary" />
+          מדריכי שימוש למערכת
+        </span>
+        <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+      </Link>
 
       <button
         onClick={logout}

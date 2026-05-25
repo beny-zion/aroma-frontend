@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import {
   LayoutDashboard, Cpu, Users, Building2, Droplets,
   PlusCircle, FileText, ClipboardList, UserCog, Settings,
-  LogOut, Menu, CalendarDays, History, Wrench, TrendingUp
+  LogOut, Menu, CalendarDays, History, Wrench, TrendingUp, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +55,7 @@ const menuSections = [
       { href: '/users', label: 'משתמשים', icon: UserCog, roles: ['admin'] },
       { href: '/audit-log', label: 'יומן פעילות', icon: History, roles: ['admin', 'manager', 'secretary'] },
       { href: '/device-types', label: 'סוגי מכשירים', icon: Settings, roles: ['admin', 'manager', 'secretary'] },
+      { href: '/guides', label: 'מדריכי שימוש', icon: BookOpen },
     ]
   }
 ];
