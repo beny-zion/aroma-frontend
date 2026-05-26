@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { workOrdersAPI } from '@/lib/api';
+import { workOrdersAPI, serviceRequestsAPI } from '@/lib/api';
 import { useTechnicians, useInvalidate } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/PageHeader';
@@ -57,16 +57,17 @@ export default function BacklogPage() {
   const { data, isLoading, mutate } = useSWR('/work-orders/backlog');
   const untouched = data?.untouched || [];
   const partial = data?.partial || [];
-  const counts = data?.counts || { untouched: 0, partial: 0, total: 0, partialDevices: 0 };
+  const openRequests = data?.openRequests || [];
+  const counts = data?.counts || { untouched: 0, partial: 0, total: 0, partialDevices: 0, openRequests: 0 };
 
-  const [tab, setTab] = useState('untouched'); // 'untouched' | 'partial'
+  const [tab, setTab] = useState('untouched'); // 'untouched' | 'partial' | 'requests'
   const [selected, setSelected] = useState(new Set());
-  const [actionOpen, setActionOpen] = useState(null); // 'reschedule' | 'followup'
+  const [actionOpen, setActionOpen] = useState(null); // 'reschedule' | 'followup' | 'schedule-requests'
   const [actionDate, setActionDate] = useState(nextSundayIso());
   const [actionTech, setActionTech] = useState('');
   const [actionSaving, setActionSaving] = useState(false);
 
-  const list = tab === 'untouched' ? untouched : partial;
+  const list = tab === 'untouched' ? untouched : tab === 'partial' ? partial : openRequests;
 
   // Reset selection when switching tabs
   useEffect(() => { setSelected(new Set()); }, [tab]);
@@ -108,12 +109,24 @@ export default function BacklogPage() {
     try {
       setActionSaving(true);
       const ids = [...selected];
-      const body = { newDate: actionDate, assignedTo: actionTech || null };
+
       if (actionOpen === 'followup') {
         await workOrdersAPI.bulkFollowup({ sourceIds: ids, targetDate: actionDate, assignedTo: actionTech || undefined });
         toast.success(`${ids.length} הזמנות המשך נוצרו`);
+      } else if (actionOpen === 'schedule-requests') {
+        // Per-request schedule — backend currently exposes a single-request endpoint,
+        // so we fan out client-side. Failures are toasted individually but don't abort.
+        let ok = 0, fail = 0;
+        for (const id of ids) {
+          try {
+            await serviceRequestsAPI.schedule(id, { assignedTo: actionTech || undefined });
+            ok++;
+          } catch { fail++; }
+        }
+        if (ok) toast.success(`${ok} פניות שובצו (${fail ? `${fail} נכשלו` : ''})`);
+        if (fail && !ok) toast.error(`שגיאה — לא נשבצו ${fail} פניות`);
       } else {
-        await workOrdersAPI.bulkReschedule({ ids, ...body });
+        await workOrdersAPI.bulkReschedule({ ids, newDate: actionDate, assignedTo: actionTech || null });
         toast.success(`${ids.length} הזמנות הועברו ל-${fmtDate(actionDate)}`);
       }
       setActionOpen(null);
@@ -147,10 +160,10 @@ export default function BacklogPage() {
       {counts.total > 0 && (
         <>
           {/* Tabs */}
-          <div className="flex gap-1 p-1 rounded-xl bg-muted">
+          <div className="flex gap-1 p-1 rounded-xl bg-muted overflow-x-auto scrollbar-hide">
             <button
               onClick={() => setTab('untouched')}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex-1 min-w-fit md:min-w-0 py-2 px-3 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
                 tab === 'untouched' ? 'bg-card text-red-700 shadow-sm' : 'text-muted-foreground'
               }`}
             >
@@ -158,11 +171,19 @@ export default function BacklogPage() {
             </button>
             <button
               onClick={() => setTab('partial')}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex-1 min-w-fit md:min-w-0 py-2 px-3 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
                 tab === 'partial' ? 'bg-card text-amber-700 shadow-sm' : 'text-muted-foreground'
               }`}
             >
-              מכשירים חסרים ({counts.partial}) <span className="text-[10px] opacity-70">· {counts.partialDevices} מכשירים</span>
+              מכשירים חסרים ({counts.partial})
+            </button>
+            <button
+              onClick={() => setTab('requests')}
+              className={`flex-1 min-w-fit md:min-w-0 py-2 px-3 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+                tab === 'requests' ? 'bg-card text-orange-700 shadow-sm' : 'text-muted-foreground'
+              }`}
+            >
+              פניות באיחור ({counts.openRequests || 0})
             </button>
           </div>
 
@@ -182,15 +203,22 @@ export default function BacklogPage() {
               </label>
               {selected.size > 0 && (
                 <div className="flex gap-2 ms-auto">
-                  {tab === 'untouched' ? (
+                  {tab === 'untouched' && (
                     <Button size="sm" onClick={() => { setActionOpen('reschedule'); setActionDate(nextSundayIso()); }} className="gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
                       העבר תאריך ({selected.size})
                     </Button>
-                  ) : (
+                  )}
+                  {tab === 'partial' && (
                     <Button size="sm" onClick={() => { setActionOpen('followup'); setActionDate(nextSundayIso()); }} className="gap-1.5">
                       <RefreshCw className="w-3.5 h-3.5" />
                       צור הזמנת המשך ({selected.size})
+                    </Button>
+                  )}
+                  {tab === 'requests' && (
+                    <Button size="sm" onClick={() => { setActionOpen('schedule-requests'); setActionDate(nextSundayIso()); }} className="gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      שבץ עכשיו ({selected.size})
                     </Button>
                   )}
                 </div>
@@ -213,6 +241,20 @@ export default function BacklogPage() {
             <div className="space-y-2">
               {list.map(wo => {
                 const isPartial = tab === 'partial';
+                const isRequest = tab === 'requests';
+
+                // Service request branch: render dedicated card and skip the WO layout
+                if (isRequest) {
+                  return (
+                    <RequestCard
+                      key={wo._id}
+                      request={wo}
+                      selected={selected.has(wo._id)}
+                      onToggle={() => toggle(wo._id)}
+                    />
+                  );
+                }
+
                 const branch = wo.branchId;
                 const customer = branch?.customerId?.name || '';
                 const isSelected = selected.has(wo._id);
@@ -374,6 +416,89 @@ export default function BacklogPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+const REQUEST_URGENCY = {
+  urgent: { label: 'מאוד דחוף', color: 'bg-red-100 text-red-700 border-red-300', accent: 'border-r-red-500' },
+  medium: { label: 'דחוף',     color: 'bg-amber-100 text-amber-700 border-amber-300', accent: 'border-r-amber-500' },
+  low:    { label: 'לא דחוף',  color: 'bg-blue-100 text-blue-700 border-blue-300', accent: 'border-r-blue-400' },
+};
+const REQUEST_ISSUE = {
+  device_broken: 'תקלה במכשיר', scent_issue: 'בעיית ריח', refill_request: 'בקשת מילוי',
+  leak: 'דליפה', noise: 'רעש', other: 'אחר'
+};
+
+function RequestCard({ request, selected, onToggle }) {
+  const urgency = REQUEST_URGENCY[request.urgency] || REQUEST_URGENCY.medium;
+  const branch = request.branchId;
+  const customer = branch?.customerId?.name || '';
+  const diffDays = Math.floor((Date.now() - new Date(request.targetByDate).getTime()) / (1000 * 60 * 60 * 24));
+
+  return (
+    <div className={`bg-card border rounded-xl p-3 border-r-4 ${urgency.accent} ${selected ? 'ring-2 ring-primary' : ''}`}>
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          className="h-4 w-4 mt-1 rounded shrink-0"
+        />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline flex-wrap gap-x-2 gap-y-0.5">
+            <Link href={`/branches/${branch?._id}`} className="font-bold text-sm hover:underline">
+              {branch?.branchName || '—'}
+            </Link>
+            {customer && (
+              <span className="text-xs text-muted-foreground">{customer}</span>
+            )}
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${urgency.color}`}>
+              {urgency.label}
+            </span>
+          </div>
+
+          <div className="text-sm mt-1 text-foreground/90">
+            <span className="text-muted-foreground">{REQUEST_ISSUE[request.issueType] || 'תקלה'}:</span> {request.description}
+          </div>
+
+          {request.reportedBy && (
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              דווח ע"י: {request.reportedBy}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-muted-foreground">
+            {branch?.city && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {branch.city}{branch.region ? ` · ${branch.region}` : ''}
+              </span>
+            )}
+            {branch?.contactPhone && (
+              <a href={`tel:${branch.contactPhone}`} className="flex items-center gap-1 hover:text-primary">
+                <Phone className="w-3 h-3" />
+                {branch.contactPerson || branch.contactPhone}
+              </a>
+            )}
+            <span className="flex items-center gap-1 text-red-700 font-medium">
+              <Clock className="w-3 h-3" />
+              יעד: {fmtDate(request.targetByDate)} · פיגור של {diffDays} ימים
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <Link
+              href="/service-requests"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <ArrowRight className="w-3 h-3" />
+              לדף פניות שירות
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
