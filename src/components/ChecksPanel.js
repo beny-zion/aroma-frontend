@@ -134,90 +134,175 @@ export default function ChecksPanel({ customerId }) {
           <p className="text-sm">אין צ'קים מתועדים</p>
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden bg-card">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-[11px] text-muted-foreground">
-              <tr>
-                <th className="text-right px-3 py-2 font-medium">מס' צ'ק</th>
-                <th className="text-right px-3 py-2 font-medium">סכום</th>
-                <th className="text-right px-3 py-2 font-medium">תאריך</th>
-                <th className="text-right px-3 py-2 font-medium">סטטוס</th>
-                <th className="text-right px-3 py-2 font-medium hidden sm:table-cell">בנק</th>
-                <th className="px-3 py-2 w-10" />
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {sorted.map(c => {
-                const meta = STATUS_META[c.status] || STATUS_META.pending;
-                const isPending = c.status === 'pending';
-                return (
-                  <tr key={c._id} className={c.status === 'cancelled' ? 'opacity-50' : ''}>
-                    <td className="px-3 py-2 font-tabular">
-                      {c.checkNumber || '—'}
-                      {c.batchSequence && (
-                        <span className="text-[10px] text-muted-foreground ms-1">
-                          ({c.batchSequence}/{c.batchSize})
+        <>
+          {/* Mobile: card per check, with quick-action buttons inline (the
+              dropdown menu was getting clipped at the edge of narrow phones) */}
+          <div className="sm:hidden space-y-2">
+            {sorted.map(c => {
+              const meta = STATUS_META[c.status] || STATUS_META.pending;
+              const isPending = c.status === 'pending';
+              return (
+                <div
+                  key={c._id}
+                  className={`bg-card border rounded-xl p-3 ${c.status === 'cancelled' ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-tabular font-bold text-lg">
+                          {c.amount.toLocaleString('he-IL')} ₪
                         </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-tabular font-semibold">
-                      {c.amount.toLocaleString('he-IL')} ₪
-                    </td>
-                    <td className="px-3 py-2 font-tabular">{fmtDate(c.dueDate)}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${meta.color}`}>
-                        {meta.label}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground text-xs hidden sm:table-cell">
-                      {c.bank || '—'}
-                    </td>
-                    <td className="px-1 py-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {isPending && (
-                            <DropdownMenuItem onClick={() => setStatus(c, 'deposited')}>
-                              <CheckIcon className="w-4 h-4 text-green-600" />
-                              סמן כהופקד
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${meta.color}`}>
+                          {meta.label}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-2 font-tabular">
+                        <span>תאריך: {fmtDate(c.dueDate)}</span>
+                        {c.checkNumber && (
+                          <span>
+                            · מס' {c.checkNumber}
+                            {c.batchSequence && <span className="opacity-70"> ({c.batchSequence}/{c.batchSize})</span>}
+                          </span>
+                        )}
+                        {c.bank && <span>· {c.bank}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Inline action buttons — no dropdown */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {isPending && (
+                      <>
+                        <button
+                          onClick={() => setStatus(c, 'deposited')}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-green-100 text-green-700 text-xs font-medium active:bg-green-200"
+                        >
+                          <CheckIcon className="w-3.5 h-3.5" />
+                          הופקד
+                        </button>
+                        <button
+                          onClick={() => setStatus(c, 'bounced')}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-red-100 text-red-700 text-xs font-medium active:bg-red-200"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          חזר
+                        </button>
+                        <button
+                          onClick={() => setStatus(c, 'cancelled')}
+                          className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-muted text-muted-foreground text-xs font-medium active:bg-muted/70"
+                        >
+                          בטל
+                        </button>
+                      </>
+                    )}
+                    {!isPending && c.status !== 'cancelled' && (
+                      <button
+                        onClick={() => setStatus(c, 'pending')}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-muted text-muted-foreground text-xs font-medium active:bg-muted/70"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        החזר ל"ממתין"
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(c)}
+                      className="inline-flex items-center justify-center px-2 py-1.5 rounded-md text-destructive active:bg-destructive/10"
+                      aria-label="מחק"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop: full table */}
+          <div className="hidden sm:block border rounded-lg overflow-hidden bg-card">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-[11px] text-muted-foreground">
+                <tr>
+                  <th className="text-right px-3 py-2 font-medium">מס' צ'ק</th>
+                  <th className="text-right px-3 py-2 font-medium">סכום</th>
+                  <th className="text-right px-3 py-2 font-medium">תאריך</th>
+                  <th className="text-right px-3 py-2 font-medium">סטטוס</th>
+                  <th className="text-right px-3 py-2 font-medium">בנק</th>
+                  <th className="px-3 py-2 w-10" />
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sorted.map(c => {
+                  const meta = STATUS_META[c.status] || STATUS_META.pending;
+                  const isPending = c.status === 'pending';
+                  return (
+                    <tr key={c._id} className={c.status === 'cancelled' ? 'opacity-50' : ''}>
+                      <td className="px-3 py-2 font-tabular">
+                        {c.checkNumber || '—'}
+                        {c.batchSequence && (
+                          <span className="text-[10px] text-muted-foreground ms-1">
+                            ({c.batchSequence}/{c.batchSize})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-tabular font-semibold">
+                        {c.amount.toLocaleString('he-IL')} ₪
+                      </td>
+                      <td className="px-3 py-2 font-tabular">{fmtDate(c.dueDate)}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${meta.color}`}>
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground text-xs">
+                        {c.bank || '—'}
+                      </td>
+                      <td className="px-1 py-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {isPending && (
+                              <DropdownMenuItem onClick={() => setStatus(c, 'deposited')}>
+                                <CheckIcon className="w-4 h-4 text-green-600" />
+                                סמן כהופקד
+                              </DropdownMenuItem>
+                            )}
+                            {isPending && (
+                              <DropdownMenuItem onClick={() => setStatus(c, 'bounced')}>
+                                <X className="w-4 h-4 text-red-600" />
+                                סמן כחזר
+                              </DropdownMenuItem>
+                            )}
+                            {!isPending && c.status !== 'cancelled' && (
+                              <DropdownMenuItem onClick={() => setStatus(c, 'pending')}>
+                                <RotateCcw className="w-4 h-4" />
+                                החזר ל"ממתין"
+                              </DropdownMenuItem>
+                            )}
+                            {isPending && (
+                              <DropdownMenuItem onClick={() => setStatus(c, 'cancelled')}>
+                                <X className="w-4 h-4 text-gray-500" />
+                                בטל
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDelete(c)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="w-4 h-4" />
+                              מחק
                             </DropdownMenuItem>
-                          )}
-                          {isPending && (
-                            <DropdownMenuItem onClick={() => setStatus(c, 'bounced')}>
-                              <X className="w-4 h-4 text-red-600" />
-                              סמן כחזר
-                            </DropdownMenuItem>
-                          )}
-                          {!isPending && c.status !== 'cancelled' && (
-                            <DropdownMenuItem onClick={() => setStatus(c, 'pending')}>
-                              <RotateCcw className="w-4 h-4" />
-                              החזר ל"ממתין"
-                            </DropdownMenuItem>
-                          )}
-                          {isPending && (
-                            <DropdownMenuItem onClick={() => setStatus(c, 'cancelled')}>
-                              <X className="w-4 h-4 text-gray-500" />
-                              בטל
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleDelete(c)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                            מחק
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <SingleCheckDialog
