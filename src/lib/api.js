@@ -71,6 +71,9 @@ export const workOrdersAPI = {
   update: (id, data) => fetchAPI(`/work-orders/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateStatus: (id, status, data = {}) => fetchAPI(`/work-orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...data }) }),
   autoGenerate: (data) => fetchAPI('/work-orders/auto-generate', { method: 'POST', body: JSON.stringify(data) }),
+  getBacklog: () => fetchAPI('/work-orders/backlog'),
+  bulkReschedule: (data) => fetchAPI('/work-orders/bulk-reschedule', { method: 'POST', body: JSON.stringify(data) }),
+  bulkFollowup: (data) => fetchAPI('/work-orders/bulk-followup', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ========== Customers ==========
