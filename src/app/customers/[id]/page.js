@@ -9,6 +9,7 @@ import { useInvalidate } from '@/hooks/useData';
 import Breadcrumb from '@/components/shared/Breadcrumb';
 import VisitsPanel from '@/components/VisitsPanel';
 import AuditLogPanel from '@/components/AuditLogPanel';
+import ChecksPanel from '@/components/ChecksPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -756,23 +757,45 @@ function DetailRow({ icon: Icon, label, value, highlight }) {
   );
 }
 
+const PAYMENT_METHOD_OPTIONS = [
+  { value: '', label: 'לא נקבע' },
+  { value: 'checks', label: 'צ\'קים' },
+  { value: 'bank_transfer', label: 'העברה בנקאית' },
+  { value: 'credit_card', label: 'כרטיס אשראי' },
+  { value: 'cash', label: 'מזומן' },
+  { value: 'other', label: 'אחר' },
+];
+
 function PaymentsPanel({ customer }) {
   const monthlyPrice = customer?.monthlyPrice || 0;
   const computedFromDevices = customer?.computedMonthlyTotal || 0;
   const totalMonthly = monthlyPrice + computedFromDevices;
   const annualEstimate = totalMonthly * 12;
   const totalDevices = (customer?.branches || []).reduce((s, b) => s + (b.activeDeviceCount || 0), 0);
+  const [paymentMethod, setPaymentMethod] = useState(customer?.paymentMethod || '');
+  const [savingPM, setSavingPM] = useState(false);
+
+  async function updatePaymentMethod(value) {
+    setPaymentMethod(value);
+    try {
+      setSavingPM(true);
+      await customersAPI.update(customer._id, { paymentMethod: value || null });
+      // refresh the SWR cache for this customer so other tabs see the change
+      mutate(`/customers/${customer._id}`);
+      toast.success('אמצעי תשלום עודכן');
+    } catch (err) {
+      toast.error(err.message || 'שגיאה');
+    } finally {
+      setSavingPM(false);
+    }
+  }
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-3">
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Receipt className="w-4 h-4 text-[var(--brand)]" />
           <h2 className="text-sm font-semibold text-[var(--text-strong)]">תשלומים</h2>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-[var(--brand-50)] text-[var(--brand-hover)] flex items-center gap-1">
-            <Sparkles className="w-2.5 h-2.5" />
-            בקרוב
-          </span>
         </div>
       </div>
 
@@ -814,14 +837,36 @@ function PaymentsPanel({ customer }) {
         </div>
       </div>
 
-      {/* Future placeholder */}
-      <div className="rounded-md border border-dashed border-[var(--border-default)] p-3 text-center">
-        <Receipt className="w-4 h-4 mx-auto text-[var(--text-muted)] mb-1" />
-        <p className="text-[12px] font-medium text-[var(--text-default)]">היסטוריית תשלומים</p>
-        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-          המודול יחובר למערכת חיוב חיצונית בהמשך.
-        </p>
+      {/* Payment method selector */}
+      <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--border-default)] p-2.5">
+        <div>
+          <div className="text-[11px] text-[var(--text-soft)]">אמצעי תשלום</div>
+          <div className="text-sm font-medium text-[var(--text-strong)] mt-0.5">
+            {PAYMENT_METHOD_OPTIONS.find(o => o.value === paymentMethod)?.label || 'לא נקבע'}
+          </div>
+        </div>
+        <select
+          value={paymentMethod}
+          onChange={e => updatePaymentMethod(e.target.value)}
+          disabled={savingPM}
+          className="px-3 py-2 border border-[var(--border-default)] rounded-md text-sm bg-card"
+        >
+          {PAYMENT_METHOD_OPTIONS.map(o => (
+            <option key={o.value || 'none'} value={o.value}>{o.label}</option>
+          ))}
+        </select>
       </div>
+
+      {/* Checks management — only when payment method is checks */}
+      {paymentMethod === 'checks' && (
+        <div>
+          <h3 className="text-sm font-semibold text-[var(--text-strong)] mb-2 flex items-center gap-2">
+            <Receipt className="w-4 h-4 text-[var(--brand)]" />
+            ניהול צ'קים
+          </h3>
+          <ChecksPanel customerId={customer._id} />
+        </div>
+      )}
     </div>
   );
 }

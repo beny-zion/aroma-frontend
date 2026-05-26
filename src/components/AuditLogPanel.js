@@ -20,6 +20,7 @@ const FIELD_LABELS = {
   // Customer
   name: 'שם',
   monthlyPrice: 'מחיר חודשי',
+  paymentMethod: 'אמצעי תשלום',
   status: 'סטטוס',
   notes: 'הערות',
   'billingDetails.address': 'כתובת לחיוב',
